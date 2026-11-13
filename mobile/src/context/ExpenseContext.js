@@ -1,9 +1,17 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+} from 'react';
 
+// 1. Create a context
 const ExpenseContext = createContext();
 
+// 2. Create the Provider
 export function ExpenseProvider({ children }) {
+
+  // Initial transactions
   const [transactions, setTransactions] = useState([
     {
       id: '1',
@@ -21,6 +29,7 @@ export function ExpenseProvider({ children }) {
     },
   ]);
 
+  // Add a new expense
   const addExpense = (expense) => {
     const newExpense = {
       ...expense,
@@ -33,6 +42,7 @@ export function ExpenseProvider({ children }) {
     ]);
   };
 
+  // Calculate total expenses
   const totalExpenses = transactions.reduce(
     (total, item) => total + item.amount,
     0
@@ -51,6 +61,7 @@ export function ExpenseProvider({ children }) {
   );
 }
 
+// 3. Custom hook
 export function useExpenses() {
   return useContext(ExpenseContext);
 }
