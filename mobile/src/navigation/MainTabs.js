@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
+import BudgetScreen from '../screens/BudgetScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -52,6 +53,14 @@ export default function MainTabs() {
         component={TransactionsScreen}
         options={{
           tabBarIcon: () => <Text style={styles.icon}>🧾</Text>,
+        }}
+      />
+
+      <Tab.Screen
+        name="Budget"
+        component={BudgetScreen}
+        options={{
+          tabBarIcon: () => <Text style={styles.icon}>💰</Text>,
         }}
       />
 
