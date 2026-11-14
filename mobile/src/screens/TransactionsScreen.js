@@ -5,15 +5,34 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
+  Alert,
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
 import TransactionItem from '../components/TransactionItem';
 
 export default function TransactionsScreen({ navigation }) {
-  const { transactions, totalExpenses } = useExpenses();
+  const { transactions, totalExpenses, deleteExpense } = useExpenses();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const handleDelete = (id, title) => {
+    Alert.alert(
+        'Delete Expense',
+        `Are you sure you want to delete "${title}"?`,
+        [
+        {
+            text: 'Cancel',
+            style: 'cancel',
+        },
+        {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => deleteExpense(id),
+        },
+        ]
+    );
+    };
 
   // Get unique categories from the existing transactions.
   const categories = [
@@ -52,6 +71,14 @@ export default function TransactionsScreen({ navigation }) {
           {transactions.length} transactions recorded
         </Text>
       </View>
+
+      {/* Add Expense Button */}
+    <Pressable
+        style={styles.addButton}
+        onPress={() => navigation.navigate('AddExpense')}
+        >
+        <Text style={styles.addButtonText}>+ Add Expense</Text>
+    </Pressable>
 
       <Text style={styles.sectionTitle}>Categories</Text>
 
@@ -104,14 +131,23 @@ export default function TransactionsScreen({ navigation }) {
         </View>
       ) : (
         filteredTransactions.map((item) => (
-            <Pressable
-                key={item.id}
+            <View key={item.id} style={styles.transactionWrapper}>
+                <Pressable
+                style={styles.transactionContent}
                 onPress={() =>
-                navigation.navigate('EditExpense', { expense: item })
+                    navigation.navigate('EditExpense', { expense: item })
                 }
-            >
+                >
                 <TransactionItem item={item} />
-            </Pressable>
+                </Pressable>
+
+                <Pressable
+                style={styles.deleteButton}
+                onPress={() => handleDelete(item.id, item.title)}
+                >
+                <Text style={styles.deleteText}>Delete</Text>
+                </Pressable>
+            </View>
         ))
       )}
     </ScrollView>
@@ -212,4 +248,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
   },
+
+  transactionWrapper: {
+    marginBottom: 12,
+    },
+
+    transactionContent: {
+    marginBottom: 6,
+    },
+
+    addButton: {
+        backgroundColor: '#8B5CF6',
+        padding: 16,
+        borderRadius: 14,
+        alignItems: 'center',
+        marginBottom: 25,
+        },
+
+    addButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+
+    deleteButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#351D2A',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    },
+
+    deleteText: {
+    color: '#F87171',
+    fontSize: 12,
+    fontWeight: '600',
+    },
 });

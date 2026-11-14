@@ -197,6 +197,13 @@ export default function DashboardScreen({ navigation }) {
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
 
+        <Pressable
+          style={styles.addButton}
+          onPress={() => navigation.navigate('AddExpense')}
+        >
+          <Text style={styles.addButtonText}>+ Add Expense</Text>
+        </Pressable>
+
 
         {/* FOOTER */}
 
