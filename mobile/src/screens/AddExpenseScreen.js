@@ -24,7 +24,7 @@ const categories = [
   'Other',
 ];
 
-export default function AddExpenseScreen({ onBack }) {
+export default function AddExpenseScreen({ navigation }) {
 
   // Access shared expense data
   const { addExpense } = useExpenses();
@@ -73,7 +73,7 @@ export default function AddExpenseScreen({ onBack }) {
       'Your expense has been added successfully!'
     );
 
-    onBack();
+    navigation.goBack();
   };
 
   return (
@@ -89,7 +89,7 @@ export default function AddExpenseScreen({ onBack }) {
 
         {/* Back Button */}
 
-        <Pressable onPress={onBack}>
+        <Pressable onPress={() => navigation.goBack()}>
           <Text style={styles.back}>
             ← Back to Dashboard
           </Text>

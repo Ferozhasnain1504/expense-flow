@@ -1,7 +1,9 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 
-import { View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import { ExpenseProvider } from './src/context/ExpenseContext';
 
@@ -9,37 +11,40 @@ import DashboardScreen from './src/screens/DashboardScreen';
 
 import AddExpenseScreen from './src/screens/AddExpenseScreen';
 
+const Stack = createNativeStackNavigator();
+
 function MainApp() {
-
-  const [currentScreen, setCurrentScreen] = useState('dashboard');
-
   return (
-    <View style={{ flex: 1 }}>
-
-      {currentScreen === 'dashboard' ? (
-
-        <DashboardScreen
-          onAddExpense={() => setCurrentScreen('add')}
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName="Dashboard"
+        screenOptions={{
+          headerShown: false,
+          animation: 'slide_from_right',
+          contentStyle: {
+            backgroundColor: '#0B1020',
+          },
+        }}
+      >
+        <Stack.Screen
+          name="Dashboard"
+          component={DashboardScreen}
         />
 
-      ) : (
-
-        <AddExpenseScreen
-          onBack={() => setCurrentScreen('dashboard')}
+        <Stack.Screen
+          name="AddExpense"
+          component={AddExpenseScreen}
         />
 
-      )}
-
-    </View>
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
 export default function App() {
-
   return (
     <ExpenseProvider>
       <MainApp />
     </ExpenseProvider>
   );
-
 }

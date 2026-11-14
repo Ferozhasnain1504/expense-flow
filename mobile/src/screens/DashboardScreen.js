@@ -7,125 +7,213 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
+  StatusBar,
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
 
-export default function DashboardScreen({ onAddExpense }) {
+import TransactionItem from '../components/TransactionItem';
 
-  // Get shared expense data
+export default function DashboardScreen({ navigation }) {
+
+  // Get expense data from Context API
   const { transactions, totalExpenses } = useExpenses();
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={styles.screen}>
 
-      {/* Header */}
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="#0B1020"
+      />
 
-      <Text style={styles.greeting}>
-        Good evening 👋
-      </Text>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
 
-      <Text style={styles.subtitle}>
-        Here's your spending overview.
-      </Text>
+        {/* HEADER */}
 
-      {/* Total Expenses Card */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>
+              Good morning 👋
+            </Text>
 
-      <View style={styles.balanceCard}>
-        <Text style={styles.cardLabel}>
-          TOTAL EXPENSES
-        </Text>
-
-        <Text style={styles.total}>
-          ₹{totalExpenses.toLocaleString('en-IN')}
-        </Text>
-
-        <Text style={styles.cardSubtitle}>
-          Your total recorded spending
-        </Text>
-      </View>
-
-      {/* Transaction Header */}
-
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>
-          Recent Transactions
-        </Text>
-
-        <Text style={styles.count}>
-          {transactions.length} records
-        </Text>
-      </View>
-
-      {/* Transaction List */}
-
-      {transactions.length === 0 ? (
-
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>💸</Text>
-
-          <Text style={styles.emptyTitle}>
-            No expenses yet
-          </Text>
-
-          <Text style={styles.emptySubtitle}>
-            Start tracking your spending today.
-          </Text>
-        </View>
-
-      ) : (
-
-        transactions.map((item) => (
-          <View
-            key={item.id}
-            style={styles.transaction}
-          >
-            <View style={styles.transactionIcon}>
-              <Text style={styles.iconText}>
-                {item.category === 'Food' ? '🍔' :
-                 item.category === 'Transport' ? '🚕' :
-                 item.category === 'Shopping' ? '🛍️' :
-                 item.category === 'Entertainment' ? '🎬' :
-                 item.category === 'Bills' ? '🧾' : '💰'}
-              </Text>
-            </View>
-
-            <View style={styles.transactionDetails}>
-              <Text style={styles.transactionTitle}>
-                {item.title}
-              </Text>
-
-              <Text style={styles.category}>
-                {item.category} · {item.date}
-              </Text>
-            </View>
-
-            <Text style={styles.amount}>
-              - ₹{item.amount.toLocaleString('en-IN')}
+            <Text style={styles.subtitle}>
+              Here's your spending overview.
             </Text>
           </View>
-        ))
 
-      )}
+          <View style={styles.profile}>
+            <Text style={styles.profileText}>
+              U
+            </Text>
+          </View>
+        </View>
 
-      {/* Add Expense Button */}
 
-      <Pressable
-        style={styles.button}
-        onPress={onAddExpense}
-      >
-        <Text style={styles.buttonText}>
-          + Add New Expense
+        {/* TOTAL EXPENSE CARD */}
+
+        <View style={styles.balanceCard}>
+
+          <Text style={styles.cardLabel}>
+            TOTAL EXPENSES
+          </Text>
+
+          <Text style={styles.total}>
+            ₹{totalExpenses.toLocaleString('en-IN', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </Text>
+
+          <Text style={styles.cardSubtitle}>
+            Your total recorded spending
+          </Text>
+
+          <View style={styles.cardFooter}>
+            <Text style={styles.footerLabel}>
+              {transactions.length} transactions
+            </Text>
+
+            <Text style={styles.footerIcon}>
+              ↗
+            </Text>
+          </View>
+
+        </View>
+
+
+        {/* QUICK SUMMARY */}
+
+        <View style={styles.summaryContainer}>
+
+          <View style={styles.summaryCard}>
+
+            <View style={styles.summaryIconGreen}>
+              <Text style={styles.iconText}>↗</Text>
+            </View>
+
+            <Text style={styles.summaryLabel}>
+              Total Records
+            </Text>
+
+            <Text style={styles.summaryValue}>
+              {transactions.length}
+            </Text>
+
+          </View>
+
+
+          <View style={styles.summaryCard}>
+
+            <View style={styles.summaryIconPurple}>
+              <Text style={styles.iconText}>₹</Text>
+            </View>
+
+            <Text style={styles.summaryLabel}>
+              Average Expense
+            </Text>
+
+            <Text style={styles.summaryValue}>
+              ₹{transactions.length > 0
+                ? Math.round(
+                    totalExpenses / transactions.length
+                  ).toLocaleString('en-IN')
+                : '0'}
+            </Text>
+
+          </View>
+
+        </View>
+
+
+        {/* TRANSACTION SECTION */}
+
+        <View style={styles.sectionHeader}>
+
+          <View>
+            <Text style={styles.sectionTitle}>
+              Recent Transactions
+            </Text>
+
+            <Text style={styles.sectionSubtitle}>
+              Keep track of your spending
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => navigation.navigate('Transactions')}
+          >
+            <Text style={styles.seeAll}>
+              See all →
+            </Text>
+          </Pressable>
+
+        </View>
+
+
+        {/* TRANSACTION LIST */}
+
+        {transactions.length === 0 ? (
+
+          <View style={styles.emptyState}>
+
+            <Text style={styles.emptyEmoji}>
+              💸
+            </Text>
+
+            <Text style={styles.emptyTitle}>
+              No expenses yet
+            </Text>
+
+            <Text style={styles.emptySubtitle}>
+              Start tracking your spending today.
+            </Text>
+
+          </View>
+
+        ) : (
+
+          transactions.slice(0, 5).map((item) => (
+            <TransactionItem
+              key={item.id}
+              item={item}
+            />
+          ))
+
+        )}
+
+
+        {/* ADD EXPENSE BUTTON */}
+
+        <Pressable
+          style={styles.addButton}
+          onPress={() => navigation.navigate('AddExpense')}
+        >
+
+          <Text style={styles.addButtonText}>
+            + Add New Expense
+          </Text>
+
+        </Pressable>
+
+
+        {/* FOOTER */}
+
+        <Text style={styles.footer}>
+          Manage your money smarter.
         </Text>
-      </Pressable>
 
-    </ScrollView>
+      </ScrollView>
+
+    </View>
   );
 }
+
+
+// STYLES
 
 const styles = StyleSheet.create({
 
@@ -140,23 +228,51 @@ const styles = StyleSheet.create({
     paddingBottom: 35,
   },
 
+
+  // HEADER
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+
   greeting: {
     color: '#FFFFFF',
-    fontSize: 27,
+    fontSize: 25,
     fontWeight: '800',
   },
 
   subtitle: {
     color: '#94A3B8',
-    marginTop: 8,
-    marginBottom: 28,
+    fontSize: 13,
+    marginTop: 7,
   },
+
+  profile: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: '#5141B8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  profileText: {
+    color: '#FFFFFF',
+    fontSize: 19,
+    fontWeight: '800',
+  },
+
+
+  // BALANCE CARD
 
   balanceCard: {
     backgroundColor: '#5141B8',
     padding: 25,
-    borderRadius: 22,
-    marginBottom: 30,
+    borderRadius: 24,
+    marginBottom: 20,
   },
 
   cardLabel: {
@@ -168,7 +284,7 @@ const styles = StyleSheet.create({
 
   total: {
     color: '#FFFFFF',
-    fontSize: 35,
+    fontSize: 34,
     fontWeight: '800',
     marginTop: 15,
   },
@@ -178,6 +294,85 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 8,
   },
+
+  cardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: '#FFFFFF30',
+    marginTop: 22,
+    paddingTop: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  footerLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  footerIcon: {
+    color: '#FFFFFF',
+    fontSize: 20,
+  },
+
+
+  // SUMMARY CARDS
+
+  summaryContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 30,
+  },
+
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#19243B',
+    padding: 17,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: '#27334C',
+  },
+
+  summaryIconGreen: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#22C55E25',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 13,
+  },
+
+  summaryIconPurple: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#8B5CF625',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 13,
+  },
+
+  iconText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+
+  summaryLabel: {
+    color: '#94A3B8',
+    fontSize: 11,
+  },
+
+  summaryValue: {
+    color: '#FFFFFF',
+    fontSize: 21,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+
+
+  // TRANSACTIONS
 
   sectionHeader: {
     flexDirection: 'row',
@@ -192,61 +387,27 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  count: {
-    color: '#94A3B8',
-    fontSize: 12,
-  },
-
-  transaction: {
-    backgroundColor: '#19243B',
-    padding: 16,
-    borderRadius: 17,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  transactionIcon: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#27334C',
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  iconText: {
-    fontSize: 21,
-  },
-
-  transactionDetails: {
-    flex: 1,
-    marginLeft: 13,
-  },
-
-  transactionTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  category: {
+  sectionSubtitle: {
     color: '#94A3B8',
     fontSize: 11,
     marginTop: 5,
   },
 
-  amount: {
-    color: '#F87171',
-    fontSize: 13,
-    fontWeight: '800',
+  seeAll: {
+    color: '#A78BFA',
+    fontSize: 12,
+    fontWeight: '700',
   },
+
+
+  // EMPTY STATE
 
   emptyState: {
     backgroundColor: '#19243B',
     padding: 30,
-    borderRadius: 18,
+    borderRadius: 20,
     alignItems: 'center',
+    marginBottom: 15,
   },
 
   emptyEmoji: {
@@ -255,8 +416,8 @@ const styles = StyleSheet.create({
 
   emptyTitle: {
     color: '#FFFFFF',
-    fontWeight: '800',
     fontSize: 17,
+    fontWeight: '800',
     marginTop: 12,
   },
 
@@ -267,18 +428,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  button: {
+
+  // ADD BUTTON
+
+  addButton: {
     backgroundColor: '#6D4AFF',
     padding: 19,
-    borderRadius: 16,
+    borderRadius: 17,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 18,
   },
 
-  buttonText: {
+  addButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+
+
+  // FOOTER
+
+  footer: {
+    color: '#64748B',
+    textAlign: 'center',
+    fontSize: 11,
+    marginTop: 25,
   },
 
 });
