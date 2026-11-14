@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useTheme } from '../context/ThemeContext';
+import { logoutUser } from '../services/authService';
 
 export default function ProfileScreen({ navigation }) {
   const { theme, isDark, toggleTheme } = useTheme();
@@ -28,11 +29,24 @@ export default function ProfileScreen({ navigation }) {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: () => {
-            navigation.getParent()?.reset({
-              index: 0,
-              routes: [{ name: 'Login' }],
-            });
+          onPress: async () => {
+            try {
+              // Delete the saved JWT token
+              await logoutUser();
+
+              // Navigate to Login and reset navigation history
+              navigation.getParent()?.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+              });
+            } catch (error) {
+              console.log('Logout error:', error.message);
+
+              Alert.alert(
+                'Logout failed',
+                'Could not log you out. Please try again.'
+              );
+            }
           },
         },
       ]
@@ -189,9 +203,7 @@ export default function ProfileScreen({ navigation }) {
         <Text
           style={[
             styles.logoutText,
-            {
-              color: colors.danger,
-            },
+            { color: colors.danger },
           ]}
         >
           Logout
