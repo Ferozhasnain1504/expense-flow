@@ -7,7 +7,13 @@ import {
   Pressable,
   StyleSheet,
   StatusBar,
+  Alert,
 } from 'react-native';
+
+import {
+  requestNotificationPermissions,
+  scheduleBillReminder,
+} from '../services/notificationService';
 
 import { useExpenses } from '../context/ExpenseContext';
 import { useTheme } from '../context/ThemeContext';
@@ -17,6 +23,36 @@ export default function DashboardScreen({ navigation }) {
   const { transactions, totalExpenses } = useExpenses();
   const { theme } = useTheme();
   const colors = theme.colors;
+
+  const handleTestNotification = async () => {
+  try {
+    const permissionGranted =
+      await requestNotificationPermissions();
+
+    if (!permissionGranted) {
+      Alert.alert(
+        'Permission Required',
+        'Please allow notifications in Android settings.'
+      );
+      return;
+    }
+
+    await scheduleBillReminder({
+      title: 'ExpenseFlow Test',
+      body: 'Your notifications are working successfully!',
+      date: new Date(Date.now() + 5000),
+      data: { type: 'test' },
+    });
+
+    Alert.alert(
+      'Success',
+      'Notification scheduled! Check your phone in 5 seconds.'
+    );
+  } catch (error) {
+    console.error('Notification error:', error);
+    Alert.alert('Error', error.message);
+  }
+};
 
   return (
     <View
@@ -36,6 +72,21 @@ export default function DashboardScreen({ navigation }) {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
+
+      <Pressable
+  onPress={handleTestNotification}
+  style={{
+    backgroundColor: colors.primary,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+    alignItems: 'center',
+  }}
+>
+  <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
+    🔔 Test Local Notification
+  </Text>
+</Pressable>
         {/* HEADER */}
 
         <View style={styles.header}>
