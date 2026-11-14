@@ -8,6 +8,7 @@ import RegisterScreen from './src/screens/auth/RegisterScreen';
 import AddExpenseScreen from './src/screens/AddExpenseScreen';
 import MainTabs from './src/navigation/MainTabs';
 import EditExpenseScreen from './src/screens/EditExpenseScreen';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 const Stack = createNativeStackNavigator();
 
@@ -35,8 +36,10 @@ function MainApp() {
 
 export default function App() {
   return (
-    <ExpenseProvider>
-      <MainApp />
-    </ExpenseProvider>
+    <ThemeProvider>
+      <ExpenseProvider>
+        <MainApp />
+      </ExpenseProvider>
+    </ThemeProvider>
   );
 }
