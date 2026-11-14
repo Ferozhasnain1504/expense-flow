@@ -11,6 +11,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
@@ -33,8 +34,9 @@ export default function AddExpenseScreen({ navigation }) {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Food');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim() || !amount.trim()) {
       Alert.alert(
         'Missing details',
@@ -53,23 +55,40 @@ export default function AddExpenseScreen({ navigation }) {
       return;
     }
 
-    addExpense({
-      title: title.trim(),
-      amount: numericAmount,
-      category,
-      date: new Date().toLocaleDateString(),
-    });
+    try {
+      setLoading(true);
 
-    setTitle('');
-    setAmount('');
-    setCategory('Food');
+      await addExpense({
+        title: title.trim(),
+        amount: numericAmount,
+        category,
+        date: new Date().toISOString(),
+      });
 
-    Alert.alert(
-      'Success',
-      'Your expense has been added successfully!'
-    );
+      setTitle('');
+      setAmount('');
+      setCategory('Food');
 
-    navigation.goBack();
+      Alert.alert(
+        'Success',
+        'Your expense has been saved successfully!'
+      );
+
+      navigation.goBack();
+    } catch (error) {
+      console.log(
+        'Save expense error:',
+        error.response?.data || error.message
+      );
+
+      Alert.alert(
+        'Failed to save expense',
+        error.response?.data?.message ||
+          'Unable to save your expense. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,7 +101,10 @@ export default function AddExpenseScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Pressable onPress={() => navigation.goBack()}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          disabled={loading}
+        >
           <Text style={[styles.back, { color: colors.primary }]}>
             ← Back to Dashboard
           </Text>
@@ -148,6 +170,7 @@ export default function AddExpenseScreen({ navigation }) {
               <Pressable
                 key={item}
                 onPress={() => setCategory(item)}
+                disabled={loading}
                 style={[
                   styles.category,
                   {
@@ -178,13 +201,21 @@ export default function AddExpenseScreen({ navigation }) {
         <Pressable
           style={[
             styles.saveButton,
-            { backgroundColor: colors.primary },
+            {
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.7 : 1,
+            },
           ]}
           onPress={handleSubmit}
+          disabled={loading}
         >
-          <Text style={styles.saveText}>
-            Save Expense
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveText}>
+              Save Expense
+            </Text>
+          )}
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

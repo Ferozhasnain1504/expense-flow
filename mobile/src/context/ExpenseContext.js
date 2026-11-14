@@ -1,54 +1,122 @@
-import React, { createContext, useContext, useState } from 'react';
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+} from 'react';
+
+import {
+  fetchExpenses as fetchExpensesAPI,
+  createExpense as createExpenseAPI,
+  updateExpense as updateExpenseAPI,
+  deleteExpense as deleteExpenseAPI,
+} from '../services/expenseService';
 
 const ExpenseContext = createContext();
 
 export function ExpenseProvider({ children }) {
-  const [transactions, setTransactions] = useState([
-    {
-      id: '1',
-      title: 'Groceries',
-      category: 'Food',
-      amount: 850,
-      date: 'Today',
-    },
-    {
-      id: '2',
-      title: 'Uber Ride',
-      category: 'Transport',
-      amount: 250,
-      date: 'Today',
-    },
-  ]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Add a new expense
-  const addExpense = (expense) => {
-    const newExpense = {
-      ...expense,
-      id: Date.now().toString(),
-    };
+  // Convert MongoDB expense into the format used by the mobile app
+  const formatExpense = (expense) => ({
+    ...expense,
+    id: expense._id,
+    date: expense.date,
+    amount: Number(expense.amount),
+  });
 
-    setTransactions((previous) => [newExpense, ...previous]);
+  // GET EXPENSES FROM BACKEND
+  const refreshExpenses = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      const expenses = await fetchExpensesAPI();
+
+      const formattedExpenses = expenses.map(formatExpense);
+
+      setTransactions(formattedExpenses);
+
+      return formattedExpenses;
+    } catch (error) {
+      console.log(
+        'Fetch expenses error:',
+        error.response?.data || error.message
+      );
+
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ADD A NEW EXPENSE
+  const addExpense = async (expense) => {
+    try {
+      const newExpense = await createExpenseAPI(expense);
+
+      const formattedExpense = formatExpense(newExpense);
+
+      setTransactions((previous) => [
+        formattedExpense,
+        ...previous,
+      ]);
+
+      return formattedExpense;
+    } catch (error) {
+      console.log(
+        'Add expense error:',
+        error.response?.data || error.message
+      );
+
+      throw error;
+    }
   };
 
-  // Update an existing expense
-  const updateExpense = (id, updatedExpense) => {
-    setTransactions((previous) =>
-      previous.map((item) =>
-        item.id === id
-          ? { ...item, ...updatedExpense }
-          : item
-      )
-    );
+  // UPDATE AN EXISTING EXPENSE
+  const updateExpense = async (id, updatedExpense) => {
+    try {
+      const updatedItem = await updateExpenseAPI(id, updatedExpense);
+
+      const formattedExpense = formatExpense(updatedItem);
+
+      setTransactions((previous) =>
+        previous.map((item) =>
+          item.id === id ? formattedExpense : item
+        )
+      );
+
+      return formattedExpense;
+    } catch (error) {
+      console.log(
+        'Update expense error:',
+        error.response?.data || error.message
+      );
+
+      throw error;
+    }
   };
 
-  // Delete an expense
-  const deleteExpense = (id) => {
-    setTransactions((previous) =>
-      previous.filter((item) => item.id !== id)
-    );
+  // DELETE AN EXPENSE
+  const deleteExpense = async (id) => {
+    try {
+      await deleteExpenseAPI(id);
+
+      setTransactions((previous) =>
+        previous.filter((item) => item.id !== id)
+      );
+    } catch (error) {
+      console.log(
+        'Delete expense error:',
+        error.response?.data || error.message
+      );
+
+      throw error;
+    }
   };
 
-  // Calculate total expenses
+  // CALCULATE TOTAL EXPENSES
   const totalExpenses = transactions.reduce(
     (total, item) => total + Number(item.amount),
     0
@@ -58,6 +126,8 @@ export function ExpenseProvider({ children }) {
     <ExpenseContext.Provider
       value={{
         transactions,
+        loading,
+        refreshExpenses,
         addExpense,
         updateExpense,
         deleteExpense,
