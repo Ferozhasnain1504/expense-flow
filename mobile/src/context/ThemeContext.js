@@ -1,7 +1,16 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ThemeContext = createContext();
+
+const THEME_STORAGE_KEY = '@expenseflow_theme';
 
 const lightTheme = {
   mode: 'light',
@@ -33,6 +42,50 @@ const darkTheme = {
 
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(true);
+  const [isThemeLoaded, setIsThemeLoaded] = useState(false);
+
+  // Load previously saved theme when the app starts.
+  useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedTheme = await AsyncStorage.getItem(
+          THEME_STORAGE_KEY
+        );
+
+        if (savedTheme === 'light') {
+          setIsDark(false);
+        } else if (savedTheme === 'dark') {
+          setIsDark(true);
+        }
+      } catch (error) {
+        console.log('Error loading theme:', error);
+      } finally {
+        setIsThemeLoaded(true);
+      }
+    };
+
+    loadTheme();
+  }, []);
+
+  // Save the selected theme whenever it changes.
+  useEffect(() => {
+    if (!isThemeLoaded) {
+      return;
+    }
+
+    const saveTheme = async () => {
+      try {
+        await AsyncStorage.setItem(
+          THEME_STORAGE_KEY,
+          isDark ? 'dark' : 'light'
+        );
+      } catch (error) {
+        console.log('Error saving theme:', error);
+      }
+    };
+
+    saveTheme();
+  }, [isDark, isThemeLoaded]);
 
   const theme = isDark ? darkTheme : lightTheme;
 
@@ -46,6 +99,7 @@ export function ThemeProvider({ children }) {
         theme,
         isDark,
         toggleTheme,
+        isThemeLoaded,
       }}
     >
       {children}
