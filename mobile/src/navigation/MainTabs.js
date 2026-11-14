@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import DashboardScreen from '../screens/DashboardScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
 import BudgetScreen from '../screens/BudgetScreen';
+import RecurringExpensesScreen from '../screens/RecurringExpensesScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
@@ -22,10 +23,8 @@ export default function MainTabs() {
       initialRouteName="Home"
       screenOptions={{
         headerShown: false,
-
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.secondaryText,
-
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
@@ -33,7 +32,6 @@ export default function MainTabs() {
           paddingTop: 8,
           paddingBottom: 8,
         },
-
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -61,6 +59,14 @@ export default function MainTabs() {
         component={BudgetScreen}
         options={{
           tabBarIcon: () => <Text style={styles.icon}>💰</Text>,
+        }}
+      />
+
+      <Tab.Screen
+        name="Recurring"
+        component={RecurringExpensesScreen}
+        options={{
+          tabBarIcon: () => <Text style={styles.icon}>🔁</Text>,
         }}
       />
 

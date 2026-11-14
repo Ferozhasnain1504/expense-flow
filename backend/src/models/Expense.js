@@ -37,14 +37,42 @@ const expenseSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+
+    // Links a generated expense to its recurring schedule.
+    recurringExpense: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'RecurringExpense',
+      default: null,
+    },
+
+    // Identifies one particular occurrence of a recurring expense.
+    recurringOccurrenceKey: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// Index for quickly finding a user's expenses by date
+// Existing expense lookup index.
 expenseSchema.index({ user: 1, date: -1 });
+
+// Prevent duplicate generation of the same recurring occurrence.
+expenseSchema.index(
+  {
+    recurringExpense: 1,
+    recurringOccurrenceKey: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      recurringExpense: { $type: 'objectId' },
+      recurringOccurrenceKey: { $type: 'string' },
+    },
+  }
+);
 
 const Expense = mongoose.model('Expense', expenseSchema);
 
