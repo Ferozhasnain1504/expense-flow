@@ -189,14 +189,12 @@ export default function DashboardScreen({ navigation }) {
         {/* ADD EXPENSE BUTTON */}
 
         <Pressable
-          style={styles.addButton}
-          onPress={() => navigation.navigate('AddExpense')}
+          style={styles.logoutButton}
+          onPress={() => {
+            navigation.replace('Login');
+          }}
         >
-
-          <Text style={styles.addButtonText}>
-            + Add New Expense
-          </Text>
-
+          <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
 
 
@@ -443,6 +441,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+
+  logoutButton: {
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: '#2A1B2B',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+
+  logoutText: {
+    color: '#EF4444',
+    fontSize: 15,
+    fontWeight: '600',
   },
 
 
