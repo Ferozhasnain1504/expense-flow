@@ -4,15 +4,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import DashboardScreen from '../screens/DashboardScreen';
 import TransactionsScreen from '../screens/TransactionsScreen';
+import AnalyticsScreen from '../screens/AnalyticsScreen';
 
 const Tab = createBottomTabNavigator();
 
 // Temporary screens — we'll build these properly in the next steps.
 
-
-function AnalyticsScreen() {
-  return <PlaceholderScreen title="Analytics" subtitle="Your expense insights will appear here." />;
-}
 
 function ProfileScreen() {
   return <PlaceholderScreen title="Profile" subtitle="Your account details will appear here." />;
