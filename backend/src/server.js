@@ -8,6 +8,8 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const budgetRoutes = require('./routes/budgetRoutes');
+const recurringExpenseRoutes = require('./routes/recurringExpenseRoutes');
+const { startRecurringExpenseJob } = require('./jobs/recurringExpenseJob');
 
 const app = express();
 
@@ -36,16 +38,25 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/budgets', budgetRoutes);
+app.use('/api/recurring-expenses', recurringExpenseRoutes);
 
 // Connect to database and start server
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
 
-  app.listen(PORT, () => {
-    console.log(`ExpenseFlow server running on port ${PORT}`);
-  });
+    // Start the recurring expense scheduler after DB connection.
+    startRecurringExpenseJob();
+
+    app.listen(PORT, () => {
+      console.log(`ExpenseFlow server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
 };
 
 startServer();
