@@ -14,14 +14,17 @@ import {
   StatusBar,
 } from 'react-native';
 
+import { useTheme } from '../../context/ThemeContext';
+
 export default function LoginScreen({ navigation }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = () => {
-
     if (!email.trim() || !password.trim()) {
       Alert.alert('Missing details', 'Please enter your email and password.');
       return;
@@ -35,24 +38,30 @@ export default function LoginScreen({ navigation }) {
     }
 
     if (password.length < 6) {
-      Alert.alert('Invalid password', 'Password must contain at least 6 characters.');
+      Alert.alert(
+        'Invalid password',
+        'Password must contain at least 6 characters.'
+      );
       return;
     }
 
     // Temporary frontend-only login.
-    // Real JWT authentication will be implemented on Day 3.
+    // Real JWT authentication will be implemented with the backend.
 
     navigation.replace('MainTabs');
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={[
+        styles.screen,
+        { backgroundColor: colors.background },
+      ]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <StatusBar
-        barStyle="light-content"
-        backgroundColor="#0B1020"
+        barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
       />
 
       <ScrollView
@@ -60,50 +69,60 @@ export default function LoginScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-
         {/* BRAND */}
 
         <View style={styles.brandContainer}>
-          <View style={styles.logo}>
+          <View
+            style={[
+              styles.logo,
+              { backgroundColor: colors.primary },
+            ]}
+          >
             <Text style={styles.logoText}>₹</Text>
           </View>
 
-          <Text style={styles.brandName}>
+          <Text style={[styles.brandName, { color: colors.text }]}>
             ExpenseFlow
           </Text>
 
-          <Text style={styles.brandTagline}>
+          <Text style={[styles.brandTagline, { color: colors.secondaryText }]}>
             Take control of your money.
           </Text>
         </View>
 
-
         {/* WELCOME */}
 
         <View style={styles.headingContainer}>
-          <Text style={styles.heading}>
+          <Text style={[styles.heading, { color: colors.text }]}>
             Welcome Back!
           </Text>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
             Sign in to continue managing your finances.
           </Text>
         </View>
 
-
         {/* EMAIL */}
 
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.text }]}>
           Email Address
         </Text>
 
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <Text style={styles.inputIcon}>✉</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Enter your email"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.secondaryText}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -112,20 +131,27 @@ export default function LoginScreen({ navigation }) {
           />
         </View>
 
-
         {/* PASSWORD */}
 
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.text }]}>
           Password
         </Text>
 
-        <View style={styles.inputContainer}>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
           <Text style={styles.inputIcon}>🔒</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Enter your password"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.secondaryText}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -135,32 +161,35 @@ export default function LoginScreen({ navigation }) {
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
           >
-            <Text style={styles.showPassword}>
+            <Text style={[styles.showPassword, { color: colors.primary }]}>
               {showPassword ? 'Hide' : 'Show'}
             </Text>
           </Pressable>
         </View>
 
-
         {/* FORGOT PASSWORD */}
 
         <Pressable
           style={styles.forgotContainer}
-          onPress={() => Alert.alert(
-            'Forgot Password',
-            'Password recovery will be implemented with backend authentication.'
-          )}
+          onPress={() =>
+            Alert.alert(
+              'Forgot Password',
+              'Password recovery will be implemented with backend authentication.'
+            )
+          }
         >
-          <Text style={styles.forgotText}>
+          <Text style={[styles.forgotText, { color: colors.primary }]}>
             Forgot Password?
           </Text>
         </Pressable>
 
-
         {/* LOGIN BUTTON */}
 
         <Pressable
-          style={styles.loginButton}
+          style={[
+            styles.loginButton,
+            { backgroundColor: colors.primary },
+          ]}
           onPress={handleLogin}
         >
           <Text style={styles.loginButtonText}>
@@ -168,41 +197,35 @@ export default function LoginScreen({ navigation }) {
           </Text>
         </Pressable>
 
-
         {/* REGISTER */}
 
         <View style={styles.registerContainer}>
-          <Text style={styles.registerText}>
+          <Text style={[styles.registerText, { color: colors.secondaryText }]}>
             Don't have an account?
           </Text>
 
           <Pressable
             onPress={() => navigation.navigate('Register')}
           >
-            <Text style={styles.registerLink}>
+            <Text style={[styles.registerLink, { color: colors.primary }]}>
               {' '}Create Account
             </Text>
           </Pressable>
         </View>
 
-
         {/* FOOTER */}
 
-        <Text style={styles.footer}>
+        <Text style={[styles.footer, { color: colors.secondaryText }]}>
           YOUR FINANCES. YOUR CONTROL.
         </Text>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-
 const styles = StyleSheet.create({
-
   screen: {
     flex: 1,
-    backgroundColor: '#0B1020',
   },
 
   container: {
@@ -212,8 +235,6 @@ const styles = StyleSheet.create({
     paddingBottom: 35,
   },
 
-  // BRAND
-
   brandContainer: {
     alignItems: 'center',
     marginBottom: 48,
@@ -222,7 +243,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 65,
     height: 65,
-    backgroundColor: '#6D4AFF',
     borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
@@ -236,43 +256,32 @@ const styles = StyleSheet.create({
   },
 
   brandName: {
-    color: '#FFFFFF',
     fontSize: 25,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
 
   brandTagline: {
-    color: '#94A3B8',
     fontSize: 13,
     marginTop: 7,
   },
-
-
-  // HEADING
 
   headingContainer: {
     marginBottom: 30,
   },
 
   heading: {
-    color: '#FFFFFF',
     fontSize: 29,
     fontWeight: '800',
   },
 
   subtitle: {
-    color: '#94A3B8',
     fontSize: 13,
     marginTop: 9,
     lineHeight: 20,
   },
 
-
-  // INPUTS
-
   label: {
-    color: '#E2E8F0',
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 10,
@@ -281,9 +290,7 @@ const styles = StyleSheet.create({
 
   inputContainer: {
     height: 58,
-    backgroundColor: '#19243B',
     borderWidth: 1,
-    borderColor: '#27334C',
     borderRadius: 15,
     flexDirection: 'row',
     alignItems: 'center',
@@ -297,19 +304,14 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    color: '#FFFFFF',
     fontSize: 14,
   },
 
   showPassword: {
-    color: '#A78BFA',
     fontSize: 12,
     fontWeight: '700',
     paddingLeft: 8,
   },
-
-
-  // FORGOT PASSWORD
 
   forgotContainer: {
     alignItems: 'flex-end',
@@ -317,17 +319,12 @@ const styles = StyleSheet.create({
   },
 
   forgotText: {
-    color: '#A78BFA',
     fontSize: 12,
     fontWeight: '700',
   },
 
-
-  // LOGIN BUTTON
-
   loginButton: {
     height: 58,
-    backgroundColor: '#6D4AFF',
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
@@ -340,9 +337,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-
-  // REGISTER
-
   registerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -350,26 +344,19 @@ const styles = StyleSheet.create({
   },
 
   registerText: {
-    color: '#94A3B8',
     fontSize: 13,
   },
 
   registerLink: {
-    color: '#A78BFA',
     fontSize: 13,
     fontWeight: '800',
   },
 
-
-  // FOOTER
-
   footer: {
-    color: '#475569',
     textAlign: 'center',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 2,
     marginTop: 55,
   },
-
 });
