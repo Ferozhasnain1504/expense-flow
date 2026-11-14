@@ -1,11 +1,43 @@
 
 const RecurringExpense = require('../models/RecurringExpense');
+const { processDueRecurringExpenses } = require('../jobs/recurringExpenseJob');
 
-const {
-  processDueRecurringExpenses,
-} = require('../jobs/recurringExpenseJob');
+// Calculate the next occurrence.
+const calculateNextDueDate = (date, frequency) => {
+  const nextDate = new Date(date);
 
-// CREATE RECURRING EXPENSE
+  if (frequency === 'daily') {
+    nextDate.setDate(nextDate.getDate() + 1);
+  } else if (frequency === 'weekly') {
+    nextDate.setDate(nextDate.getDate() + 7);
+  } else if (frequency === 'monthly') {
+    const originalDay = nextDate.getDate();
+    const targetMonth = nextDate.getMonth() + 1;
+
+    nextDate.setDate(1);
+    nextDate.setMonth(targetMonth);
+
+    const lastDay = new Date(
+      nextDate.getFullYear(),
+      nextDate.getMonth() + 1,
+      0
+    ).getDate();
+
+    nextDate.setDate(Math.min(originalDay, lastDay));
+  } else if (frequency === 'yearly') {
+    const originalMonth = nextDate.getMonth();
+
+    nextDate.setFullYear(nextDate.getFullYear() + 1);
+
+    if (nextDate.getMonth() !== originalMonth) {
+      nextDate.setDate(0);
+    }
+  }
+
+  return nextDate;
+};
+
+// CREATE recurring expense
 const createRecurringExpense = async (req, res) => {
   try {
     const {
@@ -25,6 +57,15 @@ const createRecurringExpense = async (req, res) => {
       });
     }
 
+    if (
+      !['daily', 'weekly', 'monthly', 'yearly'].includes(frequency)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid recurrence frequency',
+      });
+    }
+
     if (!Number.isFinite(Number(amount)) || Number(amount) <= 0) {
       return res.status(400).json({
         success: false,
@@ -32,49 +73,31 @@ const createRecurringExpense = async (req, res) => {
       });
     }
 
-    const allowedFrequencies = [
-      'daily',
-      'weekly',
-      'monthly',
-      'yearly',
-    ];
-
-    if (!allowedFrequencies.includes(frequency)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid recurrence frequency',
-      });
-    }
-
     const parsedStartDate = new Date(startDate);
+    const parsedEndDate = endDate ? new Date(endDate) : null;
 
     if (Number.isNaN(parsedStartDate.getTime())) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a valid start date',
+        message: 'Invalid start date',
       });
     }
 
-    let parsedEndDate = null;
-
-    if (endDate) {
-      parsedEndDate = new Date(endDate);
-
-      if (
-        Number.isNaN(parsedEndDate.getTime()) ||
-        parsedEndDate < parsedStartDate
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: 'End date must be valid and on or after the start date',
-        });
-      }
+    if (
+      parsedEndDate &&
+      (Number.isNaN(parsedEndDate.getTime()) ||
+        parsedEndDate < parsedStartDate)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid end date',
+      });
     }
 
     const recurringExpense = await RecurringExpense.create({
       user: req.user._id,
-      title: title.trim(),
-      category: category.trim(),
+      title,
+      category,
       amount: Number(amount),
       frequency,
       startDate: parsedStartDate,
@@ -98,7 +121,7 @@ const createRecurringExpense = async (req, res) => {
   }
 };
 
-// GET ALL RECURRING EXPENSES
+// GET all recurring expenses
 const getRecurringExpenses = async (req, res) => {
   try {
     const recurringExpenses = await RecurringExpense.find({
@@ -107,7 +130,6 @@ const getRecurringExpenses = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      count: recurringExpenses.length,
       recurringExpenses,
     });
   } catch (error) {
@@ -120,7 +142,7 @@ const getRecurringExpenses = async (req, res) => {
   }
 };
 
-// UPDATE RECURRING EXPENSE
+// UPDATE recurring expense
 const updateRecurringExpense = async (req, res) => {
   try {
     const recurringExpense = await RecurringExpense.findOne({
@@ -146,12 +168,6 @@ const updateRecurringExpense = async (req, res) => {
       'isActive',
     ];
 
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined) {
-        recurringExpense[field] = req.body[field];
-      }
-    }
-
     if (
       req.body.amount !== undefined &&
       (!Number.isFinite(Number(req.body.amount)) ||
@@ -175,6 +191,43 @@ const updateRecurringExpense = async (req, res) => {
       });
     }
 
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        recurringExpense[field] = req.body[field];
+      }
+    }
+
+    if (
+      req.body.frequency !== undefined ||
+      req.body.startDate !== undefined
+    ) {
+      const startDate = new Date(recurringExpense.startDate);
+
+      if (Number.isNaN(startDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid start date',
+        });
+      }
+
+      recurringExpense.nextDueDate = calculateNextDueDate(
+        startDate,
+        recurringExpense.frequency
+      );
+
+      recurringExpense.lastProcessedDate = null;
+    }
+
+    if (
+      recurringExpense.endDate &&
+      new Date(recurringExpense.endDate) < new Date(recurringExpense.startDate)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'End date cannot be before start date',
+      });
+    }
+
     await recurringExpense.save();
 
     return res.status(200).json({
@@ -192,7 +245,7 @@ const updateRecurringExpense = async (req, res) => {
   }
 };
 
-// DELETE RECURRING EXPENSE
+// DELETE recurring expense
 const deleteRecurringExpense = async (req, res) => {
   try {
     const recurringExpense = await RecurringExpense.findOneAndDelete({
@@ -221,7 +274,7 @@ const deleteRecurringExpense = async (req, res) => {
   }
 };
 
-// MANUALLY RUN RECURRING EXPENSE JOB (DEVELOPMENT ONLY)
+// MANUAL scheduler trigger (development/testing)
 const runRecurringExpenseJob = async (req, res) => {
   try {
     await processDueRecurringExpenses();
@@ -235,7 +288,7 @@ const runRecurringExpenseJob = async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: 'Failed to execute recurring expense job',
+      message: 'Recurring expense job failed',
     });
   }
 };
