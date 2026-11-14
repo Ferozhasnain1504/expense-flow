@@ -1,42 +1,62 @@
 
 import React from 'react';
-
-import {
-  View,
-  Text,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const categoryIcons = {
   Food: '🍔',
-  Transport: '🚕',
+  Transport: '🚗',
   Shopping: '🛍️',
+  Bills: '📄',
   Entertainment: '🎬',
-  Bills: '🧾',
+  Health: '💊',
   Other: '💰',
 };
 
 export default function TransactionItem({ item }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
+  const icon = categoryIcons[item.category] || '💰';
+
   return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>
-          {categoryIcons[item.category] || '💰'}
-        </Text>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.card,
+          borderColor: colors.border,
+        },
+      ]}
+    >
+      <View style={styles.leftSection}>
+        <View
+          style={[
+            styles.iconContainer,
+            { backgroundColor: colors.surface },
+          ]}
+        >
+          <Text style={styles.icon}>{icon}</Text>
+        </View>
+
+        <View style={styles.details}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            {item.title}
+          </Text>
+
+          <Text
+            style={[
+              styles.category,
+              { color: colors.secondaryText },
+            ]}
+          >
+            {item.category} · {item.date || 'Today'}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.details}>
-        <Text style={styles.title}>
-          {item.title}
-        </Text>
-
-        <Text style={styles.subtitle}>
-          {item.category} · {item.date}
-        </Text>
-      </View>
-
-      <Text style={styles.amount}>
-        - ₹{Number(item.amount).toLocaleString('en-IN')}
+      <Text style={[styles.amount, { color: colors.text }]}>
+        -₹{Number(item.amount).toLocaleString('en-IN')}
       </Text>
     </View>
   );
@@ -44,21 +64,28 @@ export default function TransactionItem({ item }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#19243B',
-    padding: 16,
-    borderRadius: 17,
-    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 15,
+    borderRadius: 15,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
 
   iconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#27334C',
-    borderRadius: 15,
-    justifyContent: 'center',
+    width: 45,
+    height: 45,
+    borderRadius: 14,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
 
   icon: {
@@ -67,24 +94,21 @@ const styles = StyleSheet.create({
 
   details: {
     flex: 1,
-    marginLeft: 13,
   },
 
   title: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
 
-  subtitle: {
-    color: '#94A3B8',
+  category: {
     fontSize: 11,
     marginTop: 5,
   },
 
   amount: {
-    color: '#F87171',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
+    marginLeft: 8,
   },
 });

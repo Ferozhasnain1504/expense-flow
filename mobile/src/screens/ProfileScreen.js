@@ -8,8 +8,10 @@ import {
   Pressable,
   Alert,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ProfileScreen({ navigation }) {
+  const { theme, isDark, toggleTheme } = useTheme();
   const handleLogout = () => {
     Alert.alert(
       'Logout',
@@ -62,7 +64,20 @@ export default function ProfileScreen({ navigation }) {
       <Text style={styles.sectionTitle}>Preferences</Text>
 
       <View style={styles.menuCard}>
-        <MenuItem icon="🎨" title="Appearance" />
+        <Pressable
+            style={styles.menuItem}
+            onPress={toggleTheme}
+            >
+            <Text style={styles.menuIcon}>🎨</Text>
+
+            <Text style={styles.menuTitle}>Appearance</Text>
+
+            <Text style={styles.themeValue}>
+                {isDark ? 'Dark' : 'Light'}
+            </Text>
+
+            <Text style={styles.arrow}>›</Text>
+        </Pressable>
         <MenuItem icon="💰" title="Currency: INR (₹)" />
         <MenuItem icon="❓" title="Help & Support" />
       </View>
@@ -196,5 +211,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 11,
     marginVertical: 25,
+  },
+  themeValue: {
+    color: '#A78BFA',
+    fontSize: 12,
+    fontWeight: '600',
+    marginRight: 10,
   },
 });
