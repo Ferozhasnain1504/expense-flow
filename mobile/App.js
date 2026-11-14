@@ -7,6 +7,7 @@ import LoginScreen from './src/screens/auth/LoginScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
 import AddExpenseScreen from './src/screens/AddExpenseScreen';
 import MainTabs from './src/navigation/MainTabs';
+import EditExpenseScreen from './src/screens/EditExpenseScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,8 @@ function MainApp() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="AddExpense" component={AddExpenseScreen} />
+        <Stack.Screen name="EditExpense" component={EditExpenseScreen}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

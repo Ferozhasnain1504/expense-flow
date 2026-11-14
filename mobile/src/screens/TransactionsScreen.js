@@ -10,7 +10,7 @@ import {
 import { useExpenses } from '../context/ExpenseContext';
 import TransactionItem from '../components/TransactionItem';
 
-export default function TransactionsScreen() {
+export default function TransactionsScreen({ navigation }) {
   const { transactions, totalExpenses } = useExpenses();
 
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -104,7 +104,14 @@ export default function TransactionsScreen() {
         </View>
       ) : (
         filteredTransactions.map((item) => (
-          <TransactionItem key={item.id} item={item} />
+            <Pressable
+                key={item.id}
+                onPress={() =>
+                navigation.navigate('EditExpense', { expense: item })
+                }
+            >
+                <TransactionItem item={item} />
+            </Pressable>
         ))
       )}
     </ScrollView>
