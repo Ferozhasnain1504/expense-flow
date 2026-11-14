@@ -1,0 +1,287 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Pressable,
+  Alert,
+} from 'react-native';
+
+import { useExpenses } from '../context/ExpenseContext';
+import TransactionItem from '../components/TransactionItem';
+
+export default function TransactionsScreen({ navigation }) {
+  const { transactions, totalExpenses, deleteExpense } = useExpenses();
+
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const handleDelete = (id, title) => {
+    Alert.alert(
+        'Delete Expense',
+        `Are you sure you want to delete "${title}"?`,
+        [
+        {
+            text: 'Cancel',
+            style: 'cancel',
+        },
+        {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => deleteExpense(id),
+        },
+        ]
+    );
+    };
+
+  // Get unique categories from the existing transactions.
+  const categories = [
+    'All',
+    ...new Set(transactions.map((item) => item.category)),
+  ];
+
+  // Show only transactions belonging to the selected category.
+  const filteredTransactions =
+    selectedCategory === 'All'
+      ? transactions
+      : transactions.filter(
+          (item) => item.category === selectedCategory
+        );
+
+  return (
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.header}>
+        <Text style={styles.heading}>Transactions</Text>
+        <Text style={styles.subtitle}>
+          Track where your money goes
+        </Text>
+      </View>
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryLabel}>Total Expenses</Text>
+
+        <Text style={styles.summaryAmount}>
+          ₹{totalExpenses.toLocaleString('en-IN')}
+        </Text>
+
+        <Text style={styles.transactionCount}>
+          {transactions.length} transactions recorded
+        </Text>
+      </View>
+
+      {/* Add Expense Button */}
+    <Pressable
+        style={styles.addButton}
+        onPress={() => navigation.navigate('AddExpense')}
+        >
+        <Text style={styles.addButtonText}>+ Add Expense</Text>
+    </Pressable>
+
+      <Text style={styles.sectionTitle}>Categories</Text>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterContainer}
+      >
+        {categories.map((category) => {
+          const isSelected = selectedCategory === category;
+
+          return (
+            <Pressable
+              key={category}
+              onPress={() => setSelectedCategory(category)}
+              style={[
+                styles.filterButton,
+                isSelected && styles.activeFilter,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  isSelected && styles.activeFilterText,
+                ]}
+              >
+                {category}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <View style={styles.transactionHeader}>
+        <Text style={styles.sectionTitle}>All Transactions</Text>
+        <Text style={styles.resultCount}>
+          {filteredTransactions.length} results
+        </Text>
+      </View>
+
+      {filteredTransactions.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>
+            No transactions found
+          </Text>
+
+          <Text style={styles.emptySubtitle}>
+            Add an expense in this category to see it here.
+          </Text>
+        </View>
+      ) : (
+        filteredTransactions.map((item) => (
+            <View key={item.id} style={styles.transactionWrapper}>
+                <Pressable
+                style={styles.transactionContent}
+                onPress={() =>
+                    navigation.navigate('EditExpense', { expense: item })
+                }
+                >
+                <TransactionItem item={item} />
+                </Pressable>
+
+                <Pressable
+                style={styles.deleteButton}
+                onPress={() => handleDelete(item.id, item.title)}
+                >
+                <Text style={styles.deleteText}>Delete</Text>
+                </Pressable>
+            </View>
+        ))
+      )}
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0B1020',
+    padding: 20,
+  },
+  header: {
+    marginTop: 45,
+    marginBottom: 24,
+  },
+  heading: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  subtitle: {
+    color: '#9298AA',
+    fontSize: 14,
+    marginTop: 6,
+  },
+  summaryCard: {
+    backgroundColor: '#191F35',
+    padding: 22,
+    borderRadius: 18,
+    marginBottom: 28,
+  },
+  summaryLabel: {
+    color: '#A0A5B5',
+    fontSize: 14,
+  },
+  summaryAmount: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    fontWeight: '700',
+    marginTop: 10,
+  },
+  transactionCount: {
+    color: '#A78BFA',
+    fontSize: 12,
+    marginTop: 8,
+  },
+  sectionTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  filterContainer: {
+    marginTop: 15,
+    marginBottom: 25,
+    flexGrow: 0,
+  },
+  filterButton: {
+    backgroundColor: '#191F35',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  activeFilter: {
+    backgroundColor: '#8B5CF6',
+  },
+  filterText: {
+    color: '#A0A5B5',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  activeFilterText: {
+    color: '#FFFFFF',
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  resultCount: {
+    color: '#9298AA',
+    fontSize: 12,
+  },
+  emptyState: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  emptySubtitle: {
+    color: '#9298AA',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  transactionWrapper: {
+    marginBottom: 12,
+    },
+
+    transactionContent: {
+    marginBottom: 6,
+    },
+
+    addButton: {
+        backgroundColor: '#8B5CF6',
+        padding: 16,
+        borderRadius: 14,
+        alignItems: 'center',
+        marginBottom: 25,
+        },
+
+    addButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+
+    deleteButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#351D2A',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    },
+
+    deleteText: {
+    color: '#F87171',
+    fontSize: 12,
+    fontWeight: '600',
+    },
+});

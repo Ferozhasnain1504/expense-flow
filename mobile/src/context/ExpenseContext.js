@@ -1,17 +1,8 @@
+import React, { createContext, useContext, useState } from 'react';
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-} from 'react';
-
-// 1. Create a context
 const ExpenseContext = createContext();
 
-// 2. Create the Provider
 export function ExpenseProvider({ children }) {
-
-  // Initial transactions
   const [transactions, setTransactions] = useState([
     {
       id: '1',
@@ -36,15 +27,30 @@ export function ExpenseProvider({ children }) {
       id: Date.now().toString(),
     };
 
-    setTransactions((previous) => [
-      newExpense,
-      ...previous,
-    ]);
+    setTransactions((previous) => [newExpense, ...previous]);
+  };
+
+  // Update an existing expense
+  const updateExpense = (id, updatedExpense) => {
+    setTransactions((previous) =>
+      previous.map((item) =>
+        item.id === id
+          ? { ...item, ...updatedExpense }
+          : item
+      )
+    );
+  };
+
+  // Delete an expense
+  const deleteExpense = (id) => {
+    setTransactions((previous) =>
+      previous.filter((item) => item.id !== id)
+    );
   };
 
   // Calculate total expenses
   const totalExpenses = transactions.reduce(
-    (total, item) => total + item.amount,
+    (total, item) => total + Number(item.amount),
     0
   );
 
@@ -53,6 +59,8 @@ export function ExpenseProvider({ children }) {
       value={{
         transactions,
         addExpense,
+        updateExpense,
+        deleteExpense,
         totalExpenses,
       }}
     >
@@ -61,7 +69,6 @@ export function ExpenseProvider({ children }) {
   );
 }
 
-// 3. Custom hook
 export function useExpenses() {
   return useContext(ExpenseContext);
 }

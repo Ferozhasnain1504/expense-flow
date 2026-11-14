@@ -42,7 +42,7 @@ export default function LoginScreen({ navigation }) {
     // Temporary frontend-only login.
     // Real JWT authentication will be implemented on Day 3.
 
-    navigation.replace('Dashboard');
+    navigation.replace('MainTabs');
   };
 
   return (
