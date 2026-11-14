@@ -1,6 +1,5 @@
 
 import React from 'react';
-
 import {
   View,
   Text,
@@ -11,58 +10,68 @@ import {
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
-
+import { useTheme } from '../context/ThemeContext';
 import TransactionItem from '../components/TransactionItem';
 
 export default function DashboardScreen({ navigation }) {
-
-  // Get expense data from Context API
   const { transactions, totalExpenses } = useExpenses();
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   return (
-    <View style={styles.screen}>
-
+    <View
+      style={[
+        styles.screen,
+        { backgroundColor: colors.background },
+      ]}
+    >
       <StatusBar
-        barStyle="light-content"
-        backgroundColor="#0B1020"
+        barStyle={
+          theme.mode === 'dark' ? 'light-content' : 'dark-content'
+        }
+        backgroundColor={colors.background}
       />
 
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-
         {/* HEADER */}
 
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>
+            <Text style={[styles.greeting, { color: colors.text }]}>
               Good morning 👋
             </Text>
 
-            <Text style={styles.subtitle}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: colors.secondaryText },
+              ]}
+            >
               Here's your spending overview.
             </Text>
           </View>
 
           <View style={styles.profile}>
-            <Text style={styles.profileText}>
-              U
-            </Text>
+            <Text style={styles.profileText}>U</Text>
           </View>
         </View>
 
-
         {/* TOTAL EXPENSE CARD */}
 
-        <View style={styles.balanceCard}>
-
-          <Text style={styles.cardLabel}>
-            TOTAL EXPENSES
-          </Text>
+        <View
+          style={[
+            styles.balanceCard,
+            { backgroundColor: colors.primary },
+          ]}
+        >
+          <Text style={styles.cardLabel}>TOTAL EXPENSES</Text>
 
           <Text style={styles.total}>
-            ₹{totalExpenses.toLocaleString('en-IN', {
+            ₹
+            {totalExpenses.toLocaleString('en-IN', {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}
@@ -77,68 +86,102 @@ export default function DashboardScreen({ navigation }) {
               {transactions.length} transactions
             </Text>
 
-            <Text style={styles.footerIcon}>
-              ↗
-            </Text>
+            <Text style={styles.footerIcon}>↗</Text>
           </View>
-
         </View>
-
 
         {/* QUICK SUMMARY */}
 
         <View style={styles.summaryContainer}>
-
-          <View style={styles.summaryCard}>
-
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <View style={styles.summaryIconGreen}>
               <Text style={styles.iconText}>↗</Text>
             </View>
 
-            <Text style={styles.summaryLabel}>
+            <Text
+              style={[
+                styles.summaryLabel,
+                { color: colors.secondaryText },
+              ]}
+            >
               Total Records
             </Text>
 
-            <Text style={styles.summaryValue}>
+            <Text
+              style={[
+                styles.summaryValue,
+                { color: colors.text },
+              ]}
+            >
               {transactions.length}
             </Text>
-
           </View>
 
-
-          <View style={styles.summaryCard}>
-
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <View style={styles.summaryIconPurple}>
               <Text style={styles.iconText}>₹</Text>
             </View>
 
-            <Text style={styles.summaryLabel}>
+            <Text
+              style={[
+                styles.summaryLabel,
+                { color: colors.secondaryText },
+              ]}
+            >
               Average Expense
             </Text>
 
-            <Text style={styles.summaryValue}>
-              ₹{transactions.length > 0
+            <Text
+              style={[
+                styles.summaryValue,
+                { color: colors.text },
+              ]}
+            >
+              ₹
+              {transactions.length > 0
                 ? Math.round(
                     totalExpenses / transactions.length
                   ).toLocaleString('en-IN')
                 : '0'}
             </Text>
-
           </View>
-
         </View>
-
 
         {/* TRANSACTION SECTION */}
 
         <View style={styles.sectionHeader}>
-
           <View>
-            <Text style={styles.sectionTitle}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: colors.text },
+              ]}
+            >
               Recent Transactions
             </Text>
 
-            <Text style={styles.sectionSubtitle}>
+            <Text
+              style={[
+                styles.sectionSubtitle,
+                { color: colors.secondaryText },
+              ]}
+            >
               Keep track of your spending
             </Text>
           </View>
@@ -146,82 +189,74 @@ export default function DashboardScreen({ navigation }) {
           <Pressable
             onPress={() => navigation.navigate('Transactions')}
           >
-            <Text style={styles.seeAll}>
-              See all →
-            </Text>
+            <Text style={styles.seeAll}>See all →</Text>
           </Pressable>
-
         </View>
-
 
         {/* TRANSACTION LIST */}
 
         {transactions.length === 0 ? (
+          <View
+            style={[
+              styles.emptyState,
+              { backgroundColor: colors.card },
+            ]}
+          >
+            <Text style={styles.emptyEmoji}>💸</Text>
 
-          <View style={styles.emptyState}>
-
-            <Text style={styles.emptyEmoji}>
-              💸
-            </Text>
-
-            <Text style={styles.emptyTitle}>
+            <Text
+              style={[
+                styles.emptyTitle,
+                { color: colors.text },
+              ]}
+            >
               No expenses yet
             </Text>
 
-            <Text style={styles.emptySubtitle}>
+            <Text
+              style={[
+                styles.emptySubtitle,
+                { color: colors.secondaryText },
+              ]}
+            >
               Start tracking your spending today.
             </Text>
-
           </View>
-
         ) : (
-
           transactions.slice(0, 5).map((item) => (
-            <TransactionItem
-              key={item.id}
-              item={item}
-            />
+            <TransactionItem key={item.id} item={item} />
           ))
-
         )}
 
-
         {/* ADD EXPENSE BUTTON */}
-
-        <Pressable
-          style={styles.logoutButton}
-          onPress={() => {
-            navigation.replace('Login');
-          }}
-        >
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
 
         <Pressable
           style={styles.addButton}
           onPress={() => navigation.navigate('AddExpense')}
         >
-          <Text style={styles.addButtonText}>+ Add Expense</Text>
+          <Text style={styles.addButtonText}>
+            + Add Expense
+          </Text>
         </Pressable>
-
 
         {/* FOOTER */}
 
-        <Text style={styles.footer}>
+        <Text
+          style={[
+            styles.footer,
+            { color: colors.secondaryText },
+          ]}
+        >
           Manage your money smarter.
         </Text>
-
       </ScrollView>
-
     </View>
   );
 }
 
-
 // STYLES
 
 const styles = StyleSheet.create({
-
   screen: {
     flex: 1,
     backgroundColor: '#0B1020',
@@ -232,7 +267,6 @@ const styles = StyleSheet.create({
     paddingTop: 55,
     paddingBottom: 35,
   },
-
 
   // HEADER
 
@@ -270,7 +304,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-
   // BALANCE CARD
 
   balanceCard: {
@@ -281,7 +314,7 @@ const styles = StyleSheet.create({
   },
 
   cardLabel: {
-    color: '#DDD6FE',
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.5,
@@ -295,7 +328,7 @@ const styles = StyleSheet.create({
   },
 
   cardSubtitle: {
-    color: '#DDD6FE',
+    color: '#FFFFFF',
     fontSize: 12,
     marginTop: 8,
   },
@@ -319,7 +352,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
   },
-
 
   // SUMMARY CARDS
 
@@ -376,7 +408,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-
   // TRANSACTIONS
 
   sectionHeader: {
@@ -403,7 +434,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-
 
   // EMPTY STATE
 
@@ -433,7 +463,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-
   // ADD BUTTON
 
   addButton: {
@@ -450,30 +479,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  logoutButton: {
-    marginTop: 20,
-    padding: 15,
-    borderRadius: 12,
-    backgroundColor: '#2A1B2B',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EF4444',
-  },
-
-  logoutText: {
-    color: '#EF4444',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
-
   // FOOTER
 
   footer: {
-    color: '#64748B',
     textAlign: 'center',
     fontSize: 11,
     marginTop: 25,
   },
-
 });

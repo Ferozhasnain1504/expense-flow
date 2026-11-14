@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   View,
@@ -9,38 +10,26 @@ import {
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
+import { useTheme } from '../context/ThemeContext';
 import TransactionItem from '../components/TransactionItem';
 
 export default function TransactionsScreen({ navigation }) {
-  const { transactions, totalExpenses, deleteExpense } = useExpenses();
+  const {
+    transactions,
+    totalExpenses,
+    deleteExpense,
+  } = useExpenses();
+
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const handleDelete = (id, title) => {
-    Alert.alert(
-        'Delete Expense',
-        `Are you sure you want to delete "${title}"?`,
-        [
-        {
-            text: 'Cancel',
-            style: 'cancel',
-        },
-        {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => deleteExpense(id),
-        },
-        ]
-    );
-    };
-
-  // Get unique categories from the existing transactions.
   const categories = [
     'All',
     ...new Set(transactions.map((item) => item.category)),
   ];
 
-  // Show only transactions belonging to the selected category.
   const filteredTransactions =
     selectedCategory === 'All'
       ? transactions
@@ -48,22 +37,65 @@ export default function TransactionsScreen({ navigation }) {
           (item) => item.category === selectedCategory
         );
 
+  const handleDelete = (id, title) => {
+    Alert.alert(
+      'Delete Expense',
+      `Are you sure you want to delete "${title}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteExpense(id),
+        },
+      ]
+    );
+  };
+
   return (
     <ScrollView
-      style={styles.container}
+      style={[
+        styles.container,
+        { backgroundColor: colors.background },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <Text style={styles.heading}>Transactions</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.heading, { color: colors.text }]}>
+          Transactions
+        </Text>
+
+        <Text
+          style={[
+            styles.subtitle,
+            { color: colors.secondaryText },
+          ]}
+        >
           Track where your money goes
         </Text>
       </View>
 
-      <View style={styles.summaryCard}>
-        <Text style={styles.summaryLabel}>Total Expenses</Text>
+      {/* SUMMARY CARD */}
 
-        <Text style={styles.summaryAmount}>
+      <View
+        style={[
+          styles.summaryCard,
+          { backgroundColor: colors.card },
+        ]}
+      >
+        <Text
+          style={[
+            styles.summaryLabel,
+            { color: colors.secondaryText },
+          ]}
+        >
+          Total Expenses
+        </Text>
+
+        <Text style={[styles.summaryAmount, { color: colors.text }]}>
           ₹{totalExpenses.toLocaleString('en-IN')}
         </Text>
 
@@ -72,15 +104,22 @@ export default function TransactionsScreen({ navigation }) {
         </Text>
       </View>
 
-      {/* Add Expense Button */}
-    <Pressable
+      {/* ADD EXPENSE */}
+
+      <Pressable
         style={styles.addButton}
         onPress={() => navigation.navigate('AddExpense')}
-        >
-        <Text style={styles.addButtonText}>+ Add Expense</Text>
-    </Pressable>
+      >
+        <Text style={styles.addButtonText}>
+          + Add Expense
+        </Text>
+      </Pressable>
 
-      <Text style={styles.sectionTitle}>Categories</Text>
+      {/* CATEGORY FILTERS */}
+
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Categories
+      </Text>
 
       <ScrollView
         horizontal
@@ -96,13 +135,22 @@ export default function TransactionsScreen({ navigation }) {
               onPress={() => setSelectedCategory(category)}
               style={[
                 styles.filterButton,
-                isSelected && styles.activeFilter,
+                {
+                  backgroundColor: isSelected
+                    ? colors.primary
+                    : colors.card,
+                  borderColor: colors.border,
+                },
               ]}
             >
               <Text
                 style={[
                   styles.filterText,
-                  isSelected && styles.activeFilterText,
+                  {
+                    color: isSelected
+                      ? '#FFFFFF'
+                      : colors.secondaryText,
+                  },
                 ]}
               >
                 {category}
@@ -112,42 +160,64 @@ export default function TransactionsScreen({ navigation }) {
         })}
       </ScrollView>
 
+      {/* TRANSACTION LIST */}
+
       <View style={styles.transactionHeader}>
-        <Text style={styles.sectionTitle}>All Transactions</Text>
-        <Text style={styles.resultCount}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          All Transactions
+        </Text>
+
+        <Text
+          style={[
+            styles.resultCount,
+            { color: colors.secondaryText },
+          ]}
+        >
           {filteredTransactions.length} results
         </Text>
       </View>
 
       {filteredTransactions.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>
+        <View
+          style={[
+            styles.emptyState,
+            { backgroundColor: colors.card },
+          ]}
+        >
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
             No transactions found
           </Text>
 
-          <Text style={styles.emptySubtitle}>
+          <Text
+            style={[
+              styles.emptySubtitle,
+              { color: colors.secondaryText },
+            ]}
+          >
             Add an expense in this category to see it here.
           </Text>
         </View>
       ) : (
         filteredTransactions.map((item) => (
-            <View key={item.id} style={styles.transactionWrapper}>
-                <Pressable
-                style={styles.transactionContent}
-                onPress={() =>
-                    navigation.navigate('EditExpense', { expense: item })
-                }
-                >
-                <TransactionItem item={item} />
-                </Pressable>
+          <View key={item.id} style={styles.transactionWrapper}>
+            <Pressable
+              style={styles.transactionContent}
+              onPress={() =>
+                navigation.navigate('EditExpense', {
+                  expense: item,
+                })
+              }
+            >
+              <TransactionItem item={item} />
+            </Pressable>
 
-                <Pressable
-                style={styles.deleteButton}
-                onPress={() => handleDelete(item.id, item.title)}
-                >
-                <Text style={styles.deleteText}>Delete</Text>
-                </Pressable>
-            </View>
+            <Pressable
+              style={styles.deleteButton}
+              onPress={() => handleDelete(item.id, item.title)}
+            >
+              <Text style={styles.deleteText}>Delete</Text>
+            </Pressable>
+          </View>
         ))
       )}
     </ScrollView>
@@ -160,128 +230,140 @@ const styles = StyleSheet.create({
     backgroundColor: '#0B1020',
     padding: 20,
   },
+
   header: {
     marginTop: 45,
     marginBottom: 24,
   },
+
   heading: {
     color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '700',
   },
+
   subtitle: {
     color: '#9298AA',
     fontSize: 14,
     marginTop: 6,
   },
+
   summaryCard: {
     backgroundColor: '#191F35',
     padding: 22,
     borderRadius: 18,
-    marginBottom: 28,
+    marginBottom: 15,
   },
+
   summaryLabel: {
     color: '#A0A5B5',
     fontSize: 14,
   },
+
   summaryAmount: {
     color: '#FFFFFF',
     fontSize: 30,
     fontWeight: '700',
     marginTop: 10,
   },
+
   transactionCount: {
     color: '#A78BFA',
     fontSize: 12,
     marginTop: 8,
   },
+
+  addButton: {
+    backgroundColor: '#8B5CF6',
+    padding: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
   sectionTitle: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },
+
   filterContainer: {
     marginTop: 15,
     marginBottom: 25,
     flexGrow: 0,
   },
+
   filterButton: {
     backgroundColor: '#191F35',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 20,
     marginRight: 10,
+    borderWidth: 1,
   },
-  activeFilter: {
-    backgroundColor: '#8B5CF6',
-  },
+
   filterText: {
     color: '#A0A5B5',
     fontSize: 13,
     fontWeight: '500',
   },
-  activeFilterText: {
-    color: '#FFFFFF',
-  },
+
   transactionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
+
   resultCount: {
     color: '#9298AA',
     fontSize: 12,
   },
+
+  transactionWrapper: {
+    marginBottom: 12,
+  },
+
+  transactionContent: {
+    marginBottom: 6,
+  },
+
+  deleteButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#351D2A',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+
+  deleteText: {
+    color: '#F87171',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
   emptyState: {
     padding: 30,
     alignItems: 'center',
+    borderRadius: 15,
   },
+
   emptyTitle: {
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '600',
   },
+
   emptySubtitle: {
     color: '#9298AA',
     fontSize: 13,
     textAlign: 'center',
     marginTop: 8,
   },
-
-  transactionWrapper: {
-    marginBottom: 12,
-    },
-
-    transactionContent: {
-    marginBottom: 6,
-    },
-
-    addButton: {
-        backgroundColor: '#8B5CF6',
-        padding: 16,
-        borderRadius: 14,
-        alignItems: 'center',
-        marginBottom: 25,
-        },
-
-    addButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '700',
-    },
-
-    deleteButton: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#351D2A',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    },
-
-    deleteText: {
-    color: '#F87171',
-    fontSize: 12,
-    fontWeight: '600',
-    },
 });

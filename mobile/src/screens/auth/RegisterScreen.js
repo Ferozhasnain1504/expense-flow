@@ -14,7 +14,11 @@ import {
   StatusBar,
 } from 'react-native';
 
+import { useTheme } from '../../context/ThemeContext';
+
 export default function RegisterScreen({ navigation }) {
+  const { theme } = useTheme();
+  const colors = theme.colors;
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,7 +29,6 @@ export default function RegisterScreen({ navigation }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = () => {
-
     if (
       !name.trim() ||
       !email.trim() ||
@@ -75,15 +78,16 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={[
+        styles.screen,
+        { backgroundColor: colors.background },
+      ]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-
       <StatusBar
-        barStyle="light-content"
-        backgroundColor="#0B1020"
+        barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
       />
 
       <ScrollView
@@ -91,122 +95,128 @@ export default function RegisterScreen({ navigation }) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-
         {/* BACK BUTTON */}
 
         <Pressable
           onPress={() => navigation.goBack()}
           style={styles.backButton}
         >
-          <Text style={styles.backText}>
+          <Text style={[styles.backText, { color: colors.primary }]}>
             ← Back
           </Text>
         </Pressable>
 
-
         {/* BRAND */}
 
         <View style={styles.brandContainer}>
-
-          <View style={styles.logo}>
-            <Text style={styles.logoText}>
-              ₹
-            </Text>
+          <View
+            style={[
+              styles.logo,
+              { backgroundColor: colors.primary },
+            ]}
+          >
+            <Text style={styles.logoText}>₹</Text>
           </View>
 
-          <Text style={styles.brandName}>
+          <Text style={[styles.brandName, { color: colors.text }]}>
             ExpenseFlow
           </Text>
 
-          <Text style={styles.brandTagline}>
+          <Text style={[styles.brandTagline, { color: colors.secondaryText }]}>
             Start your financial journey.
           </Text>
-
         </View>
-
 
         {/* HEADING */}
 
         <View style={styles.headingContainer}>
-
-          <Text style={styles.heading}>
+          <Text style={[styles.heading, { color: colors.text }]}>
             Create Account
           </Text>
 
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
             Join us and take control of your finances.
           </Text>
-
         </View>
-
 
         {/* FULL NAME */}
 
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.text }]}>
           Full Name
         </Text>
 
-        <View style={styles.inputContainer}>
-
-          <Text style={styles.inputIcon}>
-            👤
-          </Text>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={styles.inputIcon}>👤</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Enter your full name"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.secondaryText}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
             maxLength={60}
           />
-
         </View>
-
 
         {/* EMAIL */}
 
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.text }]}>
           Email Address
         </Text>
 
-        <View style={styles.inputContainer}>
-
-          <Text style={styles.inputIcon}>
-            ✉
-          </Text>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={styles.inputIcon}>✉</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Enter your email"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.secondaryText}
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
           />
-
         </View>
-
 
         {/* PASSWORD */}
 
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.text }]}>
           Password
         </Text>
 
-        <View style={styles.inputContainer}>
-
-          <Text style={styles.inputIcon}>
-            🔒
-          </Text>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={styles.inputIcon}>🔒</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Create a password"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.secondaryText}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -216,30 +226,33 @@ export default function RegisterScreen({ navigation }) {
           <Pressable
             onPress={() => setShowPassword(!showPassword)}
           >
-            <Text style={styles.showPassword}>
+            <Text style={[styles.showPassword, { color: colors.primary }]}>
               {showPassword ? 'Hide' : 'Show'}
             </Text>
           </Pressable>
-
         </View>
-
 
         {/* CONFIRM PASSWORD */}
 
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.text }]}>
           Confirm Password
         </Text>
 
-        <View style={styles.inputContainer}>
-
-          <Text style={styles.inputIcon}>
-            🔐
-          </Text>
+        <View
+          style={[
+            styles.inputContainer,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={styles.inputIcon}>🔐</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.text }]}
             placeholder="Confirm your password"
-            placeholderTextColor="#64748B"
+            placeholderTextColor={colors.secondaryText}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry={!showConfirmPassword}
@@ -251,72 +264,61 @@ export default function RegisterScreen({ navigation }) {
               setShowConfirmPassword(!showConfirmPassword)
             }
           >
-            <Text style={styles.showPassword}>
+            <Text style={[styles.showPassword, { color: colors.primary }]}>
               {showConfirmPassword ? 'Hide' : 'Show'}
             </Text>
           </Pressable>
-
         </View>
-
 
         {/* PASSWORD HINT */}
 
-        <Text style={styles.passwordHint}>
+        <Text style={[styles.passwordHint, { color: colors.secondaryText }]}>
           Use at least 8 characters for your password.
         </Text>
-
 
         {/* REGISTER BUTTON */}
 
         <Pressable
-          style={styles.registerButton}
+          style={[
+            styles.registerButton,
+            { backgroundColor: colors.primary },
+          ]}
           onPress={handleRegister}
         >
-
           <Text style={styles.registerButtonText}>
             Create Account →
           </Text>
-
         </Pressable>
-
 
         {/* LOGIN LINK */}
 
         <View style={styles.loginContainer}>
-
-          <Text style={styles.loginText}>
+          <Text style={[styles.loginText, { color: colors.secondaryText }]}>
             Already have an account?
           </Text>
 
           <Pressable
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={styles.loginLink}>
+            <Text style={[styles.loginLink, { color: colors.primary }]}>
               {' '}Sign In
             </Text>
           </Pressable>
-
         </View>
-
 
         {/* FOOTER */}
 
-        <Text style={styles.footer}>
+        <Text style={[styles.footer, { color: colors.secondaryText }]}>
           YOUR FINANCES. YOUR CONTROL.
         </Text>
-
       </ScrollView>
-
     </KeyboardAvoidingView>
   );
 }
 
-
 const styles = StyleSheet.create({
-
   screen: {
     flex: 1,
-    backgroundColor: '#0B1020',
   },
 
   container: {
@@ -326,21 +328,14 @@ const styles = StyleSheet.create({
     paddingBottom: 35,
   },
 
-
-  // BACK BUTTON
-
   backButton: {
     marginBottom: 25,
   },
 
   backText: {
-    color: '#A78BFA',
     fontSize: 15,
     fontWeight: '700',
   },
-
-
-  // BRAND
 
   brandContainer: {
     alignItems: 'center',
@@ -350,7 +345,6 @@ const styles = StyleSheet.create({
   logo: {
     width: 55,
     height: 55,
-    backgroundColor: '#6D4AFF',
     borderRadius: 19,
     justifyContent: 'center',
     alignItems: 'center',
@@ -364,41 +358,30 @@ const styles = StyleSheet.create({
   },
 
   brandName: {
-    color: '#FFFFFF',
     fontSize: 23,
     fontWeight: '800',
   },
 
   brandTagline: {
-    color: '#94A3B8',
     fontSize: 12,
     marginTop: 5,
   },
-
-
-  // HEADING
 
   headingContainer: {
     marginBottom: 20,
   },
 
   heading: {
-    color: '#FFFFFF',
     fontSize: 28,
     fontWeight: '800',
   },
 
   subtitle: {
-    color: '#94A3B8',
     fontSize: 12,
     marginTop: 8,
   },
 
-
-  // INPUTS
-
   label: {
-    color: '#E2E8F0',
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 9,
@@ -407,9 +390,7 @@ const styles = StyleSheet.create({
 
   inputContainer: {
     height: 55,
-    backgroundColor: '#19243B',
     borderWidth: 1,
-    borderColor: '#27334C',
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -423,32 +404,22 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    color: '#FFFFFF',
     fontSize: 13,
   },
 
   showPassword: {
-    color: '#A78BFA',
     fontSize: 11,
     fontWeight: '700',
     paddingLeft: 8,
   },
 
-
-  // PASSWORD HINT
-
   passwordHint: {
-    color: '#64748B',
     fontSize: 11,
     marginTop: 10,
   },
 
-
-  // REGISTER BUTTON
-
   registerButton: {
     height: 57,
-    backgroundColor: '#6D4AFF',
     borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
@@ -461,9 +432,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-
-  // LOGIN LINK
-
   loginContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -471,26 +439,19 @@ const styles = StyleSheet.create({
   },
 
   loginText: {
-    color: '#94A3B8',
     fontSize: 12,
   },
 
   loginLink: {
-    color: '#A78BFA',
     fontSize: 12,
     fontWeight: '800',
   },
 
-
-  // FOOTER
-
   footer: {
-    color: '#475569',
     textAlign: 'center',
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 2,
     marginTop: 35,
   },
-
 });

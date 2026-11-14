@@ -1,4 +1,6 @@
+
 import React, { useState } from 'react';
+
 import {
   View,
   Text,
@@ -10,6 +12,7 @@ import {
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
+import { useTheme } from '../context/ThemeContext';
 
 const CATEGORIES = [
   'Food',
@@ -25,6 +28,9 @@ export default function EditExpenseScreen({ navigation, route }) {
   const { expense } = route.params;
   const { updateExpense } = useExpenses();
 
+  const { theme } = useTheme();
+  const colors = theme.colors;
+
   const [title, setTitle] = useState(expense.title);
   const [amount, setAmount] = useState(String(expense.amount));
   const [category, setCategory] = useState(expense.category);
@@ -33,12 +39,18 @@ export default function EditExpenseScreen({ navigation, route }) {
     const numericAmount = Number(amount);
 
     if (!title.trim() || !amount.trim()) {
-      Alert.alert('Missing information', 'Please enter a title and amount.');
+      Alert.alert(
+        'Missing information',
+        'Please enter a title and amount.'
+      );
       return;
     }
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      Alert.alert('Invalid amount', 'Enter an amount greater than zero.');
+      Alert.alert(
+        'Invalid amount',
+        'Enter an amount greater than zero.'
+      );
       return;
     }
 
@@ -57,62 +69,129 @@ export default function EditExpenseScreen({ navigation, route }) {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={[
+        styles.container,
+        { backgroundColor: colors.background },
+      ]}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.header}>
         <Pressable onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>← Back</Text>
+          <Text style={[styles.backText, { color: colors.primary }]}>
+            ← Back
+          </Text>
         </Pressable>
 
-        <Text style={styles.heading}>Edit Expense</Text>
-        <Text style={styles.subtitle}>Update your transaction details</Text>
+        <Text style={[styles.heading, { color: colors.text }]}>
+          Edit Expense
+        </Text>
+
+        <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
+          Update your transaction details
+        </Text>
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Expense title</Text>
+      <View
+        style={[
+          styles.form,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+          },
+        ]}
+      >
+        <Text style={[styles.label, { color: colors.text }]}>
+          Expense title
+        </Text>
+
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.surface,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
           value={title}
           onChangeText={setTitle}
           placeholder="e.g. Groceries"
-          placeholderTextColor="#777F95"
+          placeholderTextColor={colors.secondaryText}
         />
 
-        <Text style={styles.label}>Amount (₹)</Text>
+        <Text style={[styles.label, { color: colors.text }]}>
+          Amount (₹)
+        </Text>
+
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              backgroundColor: colors.surface,
+              color: colors.text,
+              borderColor: colors.border,
+            },
+          ]}
           value={amount}
           onChangeText={setAmount}
           keyboardType="decimal-pad"
           placeholder="Enter amount"
-          placeholderTextColor="#777F95"
+          placeholderTextColor={colors.secondaryText}
         />
 
-        <Text style={styles.label}>Category</Text>
+        <Text style={[styles.label, { color: colors.text }]}>
+          Category
+        </Text>
 
         <View style={styles.categories}>
-          {CATEGORIES.map((item) => (
-            <Pressable
-              key={item}
-              onPress={() => setCategory(item)}
-              style={[
-                styles.categoryButton,
-                category === item && styles.selectedCategory,
-              ]}
-            >
-              <Text
+          {CATEGORIES.map((item) => {
+            const selected = category === item;
+
+            return (
+              <Pressable
+                key={item}
+                onPress={() => setCategory(item)}
                 style={[
-                  styles.categoryText,
-                  category === item && styles.selectedCategoryText,
+                  styles.categoryButton,
+                  {
+                    backgroundColor: selected
+                      ? colors.primary
+                      : colors.surface,
+                    borderColor: selected
+                      ? colors.primary
+                      : colors.border,
+                  },
                 ]}
               >
-                {item}
-              </Text>
-            </Pressable>
-          ))}
+                <Text
+                  style={[
+                    styles.categoryText,
+                    {
+                      color: selected ? '#FFFFFF' : colors.text,
+                      fontWeight: selected ? '700' : '500',
+                    },
+                  ]}
+                >
+                  {item}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
-        <Pressable style={styles.saveButton} onPress={handleUpdate}>
-          <Text style={styles.saveButtonText}>Save Changes</Text>
+        <Pressable
+          style={[
+            styles.saveButton,
+            { backgroundColor: colors.primary },
+          ]}
+          onPress={handleUpdate}
+        >
+          <Text style={styles.saveButtonText}>
+            Save Changes
+          </Text>
         </Pressable>
       </View>
     </ScrollView>
@@ -122,76 +201,78 @@ export default function EditExpenseScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B1020',
-    padding: 20,
   },
+
+  content: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+
   header: {
     marginTop: 45,
     marginBottom: 30,
   },
+
   backText: {
-    color: '#A78BFA',
     fontSize: 15,
     marginBottom: 22,
+    fontWeight: '600',
   },
+
   heading: {
-    color: '#FFFFFF',
     fontSize: 27,
     fontWeight: '700',
   },
+
   subtitle: {
-    color: '#9298AA',
     fontSize: 14,
     marginTop: 7,
   },
+
   form: {
-    backgroundColor: '#191F35',
     padding: 20,
     borderRadius: 18,
+    borderWidth: 1,
   },
+
   label: {
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 9,
     marginTop: 15,
   },
+
   input: {
-    backgroundColor: '#252D45',
-    color: '#FFFFFF',
     padding: 15,
     borderRadius: 10,
     fontSize: 15,
+    borderWidth: 1,
   },
+
   categories: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 9,
   },
+
   categoryButton: {
-    backgroundColor: '#252D45',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
+    borderWidth: 1,
   },
-  selectedCategory: {
-    backgroundColor: '#8B5CF6',
-  },
+
   categoryText: {
-    color: '#A0A5B5',
     fontSize: 13,
   },
-  selectedCategoryText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
+
   saveButton: {
-    backgroundColor: '#8B5CF6',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 30,
   },
+
   saveButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
