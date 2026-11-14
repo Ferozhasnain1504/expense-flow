@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   View,
@@ -8,14 +8,39 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 
 import { useTheme } from '../context/ThemeContext';
-import { logoutUser } from '../services/authService';
+import {
+  logoutUser,
+  getCurrentUser,
+} from '../services/authService';
 
 export default function ProfileScreen({ navigation }) {
   const { theme, isDark, toggleTheme } = useTheme();
   const colors = theme.colors;
+
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        console.log(
+          'Profile loading error:',
+          error.response?.data || error.message
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -31,10 +56,8 @@ export default function ProfileScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Delete the saved JWT token
               await logoutUser();
 
-              // Navigate to Login and reset navigation history
               navigation.getParent()?.reset({
                 index: 0,
                 routes: [{ name: 'Login' }],
@@ -86,28 +109,36 @@ export default function ProfileScreen({ navigation }) {
             { backgroundColor: colors.primary },
           ]}
         >
-          <Text style={styles.avatarText}>U</Text>
+          <Text style={styles.avatarText}>
+            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+          </Text>
         </View>
 
-        <Text style={[styles.name, { color: colors.text }]}>
-          ExpenseFlow User
-        </Text>
+        {loading ? (
+          <ActivityIndicator color={colors.primary} />
+        ) : (
+          <>
+            <Text style={[styles.name, { color: colors.text }]}>
+              {user?.name || 'User'}
+            </Text>
 
-        <Text style={[styles.email, { color: colors.secondaryText }]}>
-          Account details coming soon
-        </Text>
+            <Text style={[styles.email, { color: colors.secondaryText }]}>
+              {user?.email || 'Email unavailable'}
+            </Text>
 
-        <Text
-          style={[
-            styles.accountBadge,
-            {
-              color: colors.primary,
-              backgroundColor: colors.surface,
-            },
-          ]}
-        >
-          Demo Account
-        </Text>
+            <Text
+              style={[
+                styles.accountBadge,
+                {
+                  color: colors.primary,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              Verified Account
+            </Text>
+          </>
+        )}
       </View>
 
       {/* Account Section */}
