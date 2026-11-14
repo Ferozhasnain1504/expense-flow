@@ -37,23 +37,45 @@ export default function TransactionsScreen({ navigation }) {
           (item) => item.category === selectedCategory
         );
 
-  const handleDelete = (id, title) => {
-    Alert.alert(
-      'Delete Expense',
-      `Are you sure you want to delete "${title}"?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+  
+const handleDelete = (id, title) => {
+  Alert.alert(
+    'Delete Expense',
+    `Are you sure you want to delete "${title}"?`,
+    [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteExpense(id);
+
+            Alert.alert(
+              'Deleted',
+              'Expense deleted successfully.'
+            );
+          } catch (error) {
+            console.log(
+              'Delete expense error:',
+              error.response?.data || error.message
+            );
+
+            Alert.alert(
+              'Delete failed',
+              error.response?.data?.message ||
+                'Could not delete this expense. Please try again.'
+            );
+          }
         },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteExpense(id),
-        },
-      ]
-    );
-  };
+      },
+    ]
+  );
+};
+
 
   return (
     <ScrollView

@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
@@ -34,8 +35,9 @@ export default function EditExpenseScreen({ navigation, route }) {
   const [title, setTitle] = useState(expense.title);
   const [amount, setAmount] = useState(String(expense.amount));
   const [category, setCategory] = useState(expense.category);
+  const [loading, setLoading] = useState(false);
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     const numericAmount = Number(amount);
 
     if (!title.trim() || !amount.trim()) {
@@ -54,18 +56,35 @@ export default function EditExpenseScreen({ navigation, route }) {
       return;
     }
 
-    updateExpense(expense.id, {
-      title: title.trim(),
-      amount: numericAmount,
-      category,
-    });
+    try {
+      setLoading(true);
 
-    Alert.alert('Success', 'Expense updated successfully.', [
-      {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
-      },
-    ]);
+      await updateExpense(expense.id, {
+        title: title.trim(),
+        amount: numericAmount,
+        category,
+      });
+
+      Alert.alert('Success', 'Expense updated successfully.', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error) {
+      console.log(
+        'Update expense screen error:',
+        error.response?.data || error.message
+      );
+
+      Alert.alert(
+        'Update failed',
+        error.response?.data?.message ||
+          'Could not update the expense. Please try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -185,13 +204,21 @@ export default function EditExpenseScreen({ navigation, route }) {
         <Pressable
           style={[
             styles.saveButton,
-            { backgroundColor: colors.primary },
+            {
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.7 : 1,
+            },
           ]}
           onPress={handleUpdate}
+          disabled={loading}
         >
-          <Text style={styles.saveButtonText}>
-            Save Changes
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>
+              Save Changes
+            </Text>
+          )}
         </Pressable>
       </View>
     </ScrollView>

@@ -12,44 +12,88 @@ import {
   Platform,
   Alert,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 
 import { useTheme } from '../../context/ThemeContext';
+import { loginUser } from '../../services/authService';
+import { useExpenses } from '../../context/ExpenseContext';
 
 export default function LoginScreen({ navigation }) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const { refreshExpenses } = useExpenses();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing details', 'Please enter your email and password.');
-      return;
+  
+const handleLogin = async () => {
+  if (!email.trim() || !password.trim()) {
+    Alert.alert(
+      'Missing details',
+      'Please enter your email and password.'
+    );
+    return;
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if (!emailRegex.test(email.trim())) {
+    Alert.alert('Invalid email', 'Please enter a valid email address.');
+    return;
+  }
+
+  if (password.length < 6) {
+    Alert.alert(
+      'Invalid password',
+      'Password must contain at least 6 characters.'
+    );
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // Authenticate user
+    const response = await loginUser({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+
+    if (response.success) {
+      // Fetch expenses separately
+      try {
+        await refreshExpenses();
+      } catch (expenseError) {
+        console.log('Expense loading error:', expenseError.message);
+
+        Alert.alert(
+          'Login successful',
+          'You are signed in, but your expenses could not be loaded. Please refresh later.'
+        );
+      }
+
+      navigation.replace('MainTabs');
     }
+  } catch (error) {
+    console.log(
+      'Login error:',
+      error.response?.data || error.message
+    );
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const message =
+      error.response?.data?.message ||
+      'Unable to connect to the server. Please try again.';
 
-    if (!emailRegex.test(email.trim())) {
-      Alert.alert('Invalid email', 'Please enter a valid email address.');
-      return;
-    }
+    Alert.alert('Login Failed', message);
+  } finally {
+    setLoading(false);
+  }
+};
 
-    if (password.length < 6) {
-      Alert.alert(
-        'Invalid password',
-        'Password must contain at least 6 characters.'
-      );
-      return;
-    }
-
-    // Temporary frontend-only login.
-    // Real JWT authentication will be implemented with the backend.
-
-    navigation.replace('MainTabs');
-  };
 
   return (
     <KeyboardAvoidingView
@@ -174,7 +218,7 @@ export default function LoginScreen({ navigation }) {
           onPress={() =>
             Alert.alert(
               'Forgot Password',
-              'Password recovery will be implemented with backend authentication.'
+              'Password recovery will be implemented in a future update.'
             )
           }
         >
@@ -188,13 +232,21 @@ export default function LoginScreen({ navigation }) {
         <Pressable
           style={[
             styles.loginButton,
-            { backgroundColor: colors.primary },
+            {
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.7 : 1,
+            },
           ]}
           onPress={handleLogin}
+          disabled={loading}
         >
-          <Text style={styles.loginButtonText}>
-            Sign In →
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.loginButtonText}>
+              Sign In →
+            </Text>
+          )}
         </Pressable>
 
         {/* REGISTER */}
@@ -206,6 +258,7 @@ export default function LoginScreen({ navigation }) {
 
           <Pressable
             onPress={() => navigation.navigate('Register')}
+            disabled={loading}
           >
             <Text style={[styles.registerLink, { color: colors.primary }]}>
               {' '}Create Account

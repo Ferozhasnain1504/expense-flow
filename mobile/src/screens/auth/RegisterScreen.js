@@ -12,13 +12,17 @@ import {
   Platform,
   Alert,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 
 import { useTheme } from '../../context/ThemeContext';
+import { registerUser } from '../../services/authService';
+import { useExpenses } from '../../context/ExpenseContext';
 
 export default function RegisterScreen({ navigation }) {
   const { theme } = useTheme();
   const colors = theme.colors;
+  const { refreshExpenses } = useExpenses();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,8 +31,9 @@ export default function RegisterScreen({ navigation }) {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (
       !name.trim() ||
       !email.trim() ||
@@ -62,19 +67,47 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    // Temporary frontend-only registration.
-    // Real account creation will use our Express API.
+    try {
+      setLoading(true);
 
-    Alert.alert(
-      'Registration successful',
-      'Your registration form is valid. Backend integration is coming next.',
-      [
-        {
-          text: 'Continue to Login',
-          onPress: () => navigation.navigate('Login'),
-        },
-      ]
-    );
+      const response = await registerUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (response.success) {
+        try {
+          await refreshExpenses();
+        } catch (expenseError) {
+          console.log('Expense loading error:', expenseError.message);
+        }
+
+        Alert.alert(
+          'Registration successful',
+          `Welcome to ExpenseFlow, ${response.user.name}!`,
+          [
+            {
+              text: 'Continue',
+              onPress: () => navigation.replace('MainTabs'),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.log(
+        'Registration error:',
+        error.response?.data || error.message
+      );
+
+      const message =
+        error.response?.data?.message ||
+        'Unable to connect to the server. Please try again.';
+
+      Alert.alert('Registration Failed', message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -100,6 +133,7 @@ export default function RegisterScreen({ navigation }) {
         <Pressable
           onPress={() => navigation.goBack()}
           style={styles.backButton}
+          disabled={loading}
         >
           <Text style={[styles.backText, { color: colors.primary }]}>
             ← Back
@@ -281,13 +315,21 @@ export default function RegisterScreen({ navigation }) {
         <Pressable
           style={[
             styles.registerButton,
-            { backgroundColor: colors.primary },
+            {
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.7 : 1,
+            },
           ]}
           onPress={handleRegister}
+          disabled={loading}
         >
-          <Text style={styles.registerButtonText}>
-            Create Account →
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.registerButtonText}>
+              Create Account →
+            </Text>
+          )}
         </Pressable>
 
         {/* LOGIN LINK */}
@@ -299,6 +341,7 @@ export default function RegisterScreen({ navigation }) {
 
           <Pressable
             onPress={() => navigation.navigate('Login')}
+            disabled={loading}
           >
             <Text style={[styles.loginLink, { color: colors.primary }]}>
               {' '}Sign In
