@@ -23,6 +23,13 @@ import {
   deleteRecurringExpense,
 } from '../services/recurringExpenseService';
 
+import {
+  requestNotificationPermissions,
+  scheduleRecurringExpenseReminder,
+  cancelRecurringExpenseReminder,
+  getScheduledBillReminders,
+} from '../services/notificationService';
+
 const categories = [
   'Food',
   'Transport',
@@ -153,11 +160,30 @@ export default function RecurringExpensesScreen() {
     try {
       setSaving(true);
 
-      if (editingId) {
-        await updateRecurringExpense(editingId, payload);
-      } else {
-        await createRecurringExpense(payload);
-      }
+      let savedExpense;
+
+if (editingId) {
+  savedExpense = await updateRecurringExpense(editingId, payload);
+} else {
+  savedExpense = await createRecurringExpense(payload);
+}
+
+// Schedule reminder for newly created active expenses.
+// Schedule or update reminders for active recurring expenses.
+if (savedExpense?.isActive !== false) {
+  const permissionGranted =
+    await requestNotificationPermissions();
+
+  if (permissionGranted) {
+    const notificationId =
+      await scheduleRecurringExpenseReminder(savedExpense);
+
+    console.log('Recurring reminder ID:', notificationId);
+  }
+} else if (savedExpense?._id) {
+  // Keep paused expenses without scheduled reminders.
+  await cancelRecurringExpenseReminder(savedExpense._id);
+}
 
       await loadRecurringExpenses();
       resetForm();
@@ -195,16 +221,30 @@ export default function RecurringExpensesScreen() {
     });
 
   const handleToggleActive = async (item) => {
-    try {
-      await updateRecurringExpense(item._id, {
-        isActive: !item.isActive,
-      });
+  try {
+    const updatedExpense = await updateRecurringExpense(item._id, {
+      isActive: !item.isActive,
+    });
 
-      await loadRecurringExpenses();
-    } catch (error) {
-      Alert.alert('Error', 'Could not update recurring expense.');
+    if (item.isActive) {
+      // Expense was active, so cancel its reminder.
+      await cancelRecurringExpenseReminder(item._id);
+    } else {
+      // Expense was paused, so schedule a reminder when resumed.
+      const permissionGranted =
+        await requestNotificationPermissions();
+
+      if (permissionGranted) {
+        await scheduleRecurringExpenseReminder(updatedExpense);
+      }
     }
-  };
+
+    await loadRecurringExpenses();
+  } catch (error) {
+    console.error('Toggle recurring expense error:', error);
+    Alert.alert('Error', 'Could not update recurring expense.');
+  }
+};
 
   const handleDelete = (item) => {
     Alert.alert(
@@ -218,6 +258,10 @@ export default function RecurringExpensesScreen() {
           onPress: async () => {
             try {
               await deleteRecurringExpense(item._id);
+
+              // Cancel the scheduled notification for this expense.
+              await cancelRecurringExpenseReminder(item._id);
+
               await loadRecurringExpenses();
             } catch (error) {
               Alert.alert('Error', 'Could not delete recurring expense.');
@@ -242,6 +286,15 @@ export default function RecurringExpensesScreen() {
 
       return total + monthlyValue;
     }, 0);
+
+      const checkScheduledReminders = async () => {
+    const reminders = await getScheduledBillReminders();
+
+    console.log(
+      'Scheduled notifications:',
+      JSON.stringify(reminders, null, 2)
+    );
+  };
 
   return (
     <KeyboardAvoidingView
