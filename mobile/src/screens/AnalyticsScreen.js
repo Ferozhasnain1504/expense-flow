@@ -1,5 +1,6 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { fetchFinancialInsights } from '../services/financialInsightsService';
 
 import {
   View,
@@ -52,6 +53,41 @@ export default function AnalyticsScreen() {
 
   const [selectedPeriod, setSelectedPeriod] =
     useState('Last 6 months');
+
+  const [financialInsights, setFinancialInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+  const [insightsError, setInsightsError] = useState(false);
+
+  useEffect(() => {
+  const loadFinancialInsights = async () => {
+    try {
+      setInsightsLoading(true);
+      setInsightsError(false);
+
+      const currentDate = new Date();
+
+      const data = await fetchFinancialInsights(
+        currentDate.getMonth() + 1,
+        currentDate.getFullYear()
+      );
+
+      setFinancialInsights(data);
+    } catch (error) {
+  console.log('FINANCIAL INSIGHTS ERROR:', {
+    message: error.message,
+    status: error.response?.status,
+    response: error.response?.data,
+    url: error.config?.url,
+  });
+
+  setInsightsError(true);
+} finally {
+      setInsightsLoading(false);
+    }
+  };
+
+  loadFinancialInsights();
+}, []);
 
   const now = new Date();
 
@@ -353,6 +389,19 @@ export default function AnalyticsScreen() {
           {periodTransactions.length} transactions in {selectedPeriod.toLowerCase()}
         </Text>
       </View>
+
+            {/* SMART FINANCIAL INSIGHTS */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Smart Financial Insights
+      </Text>
+
+      <FinancialInsightsSection
+        insights={financialInsights}
+        loading={insightsLoading}
+        error={insightsError}
+        colors={colors}
+        formatCurrency={formatCurrency}
+      />
 
       {/* MONTHLY COMPARISON */}
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -669,6 +718,302 @@ export default function AnalyticsScreen() {
   );
 }
 
+
+function FinancialInsightsSection({
+  insights,
+  loading,
+  error,
+  colors,
+  formatCurrency,
+}) {
+  if (loading) {
+    return (
+      <View
+        style={[
+          styles.emptyState,
+          { backgroundColor: colors.card },
+        ]}
+      >
+        <Text style={{ color: colors.secondaryText }}>
+          Analysing your spending...
+        </Text>
+      </View>
+    );
+  }
+
+  if (error || !insights) {
+    return (
+      <View
+        style={[
+          styles.emptyState,
+          { backgroundColor: colors.card },
+        ]}
+      >
+        <Text style={{ color: colors.secondaryText }}>
+          Unable to load financial insights.
+        </Text>
+      </View>
+    );
+  }
+
+  const health = insights.spendingHealth;
+  const score = health?.score ?? null;
+  const dataAvailable = health?.dataAvailable || {};
+
+  const availableComponents = [
+    dataAvailable.budget,
+    dataAvailable.spendingTrends,
+    dataAvailable.consistency,
+  ].filter(Boolean).length;
+
+  const isPartialScore =
+    score !== null && availableComponents < 3;
+
+  const healthColor =
+    score === null
+      ? colors.secondaryText
+      : score >= 80
+        ? '#10B981'
+        : score >= 60
+          ? '#F59E0B'
+          : '#EF4444';
+
+  const trends = insights.spendingTrends || [];
+  const unusualExpenses = insights.unusualExpenses || [];
+  const budgetAlerts = insights.budgetRecommendations || [];
+  const opportunities = insights.savingsOpportunities || [];
+
+  const InsightCard = ({ title, message, color }) => (
+    <View
+      style={[
+        styles.financialInsightCard,
+        { backgroundColor: colors.card },
+      ]}
+    >
+      <Text style={[styles.financialInsightTitle, { color }]}>
+        {title}
+      </Text>
+
+      <Text style={{ color: colors.secondaryText, lineHeight: 21 }}>
+        {message}
+      </Text>
+    </View>
+  );
+
+  return (
+    <View>
+      {/* SPENDING HEALTH SCORE */}
+      <View
+        style={[
+          styles.healthCard,
+          { backgroundColor: colors.card },
+        ]}
+      >
+        <Text style={{ color: colors.secondaryText, fontSize: 13 }}>
+          SPENDING HEALTH SCORE
+        </Text>
+
+        <View style={styles.healthScoreRow}>
+          <Text style={[styles.healthScore, { color: healthColor }]}>
+            {score === null ? 'N/A' : `${score}/100`}
+          </Text>
+
+          <Text style={[styles.healthLabel, { color: healthColor }]}>
+            {score === null
+              ? 'Insufficient data'
+              : isPartialScore
+                ? 'Partial score'
+                : health?.label || 'Not available'}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.healthProgressBackground,
+            { backgroundColor: colors.surface },
+          ]}
+        >
+          <View
+            style={[
+              styles.healthProgressFill,
+              {
+                width: `${Math.max(0, Math.min(100, score ?? 0))}%`,
+                backgroundColor: healthColor,
+              },
+            ]}
+          />
+        </View>
+
+        <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+          {isPartialScore
+            ? `Based on ${availableComponents} of 3 available components. This is not a complete financial health assessment.`
+            : score === null
+              ? 'More financial data is needed to calculate your spending health.'
+              : 'Based on budget adherence, spending trends and consistency.'}
+        </Text>
+
+        <View style={{ marginTop: 12, gap: 8 }}>
+          {[
+            {
+              label: 'Budget management',
+              available: dataAvailable.budget,
+              value: health?.components?.budgetScore,
+            },
+            {
+              label: 'Spending trends',
+              available: dataAvailable.spendingTrends,
+              value: health?.components?.trendScore,
+            },
+            {
+              label: 'Spending consistency',
+              available: dataAvailable.consistency,
+              value: health?.components?.consistencyScore,
+            },
+          ].map((item) => (
+            <View
+              key={item.label}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+                {item.label}
+              </Text>
+
+              <Text style={{ color: colors.text, fontSize: 12 }}>
+                {item.available && item.value !== null
+                  ? `${item.value}/100`
+                  : 'Insufficient data'}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* SPENDING TRENDS */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Spending Trends
+      </Text>
+
+      {trends.length === 0 ? (
+        <Text style={{ color: colors.secondaryText, marginBottom: 20 }}>
+          Not enough spending data to identify trends yet.
+        </Text>
+      ) : (
+        trends.map((item, index) => (
+          <InsightCard
+            key={`${item.category}-${index}`}
+            title={`${item.category}: ${
+              item.trend === 'increased'
+                ? 'Spending increased'
+                : item.trend === 'decreased'
+                  ? 'Spending decreased'
+                  : item.trend === 'stable'
+                    ? 'Spending is stable'
+                    : 'Building history'
+            }`}
+            message={
+              item.changePercentage === null
+                ? 'More historical transactions are needed for comparison.'
+                : `${Math.abs(item.changePercentage)}% ${
+                    item.changePercentage >= 0 ? 'higher' : 'lower'
+                  } than the previous three-month average daily spending.`
+            }
+            color={
+              item.trend === 'increased'
+                ? '#EF4444'
+                : item.trend === 'decreased'
+                  ? '#10B981'
+                  : colors.primary
+            }
+          />
+        ))
+      )}
+
+      {/* UNUSUAL EXPENSES */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Unusual Expenses
+      </Text>
+
+      {unusualExpenses.length === 0 ? (
+        <InsightCard
+          title="No unusual expenses detected"
+          message="No transactions currently meet the unusual spending threshold."
+          color="#10B981"
+        />
+      ) : (
+        unusualExpenses.map((item) => (
+          <InsightCard
+            key={item.id}
+            title={item.title}
+            message={`${item.category} · ${formatCurrency(item.amount)} · Historical median: ${formatCurrency(item.historicalAverage)}`}
+            color="#EF4444"
+          />
+        ))
+      )}
+
+      {/* BUDGET ALERTS */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Budget Alerts
+      </Text>
+
+      {!insights.budget ? (
+        <InsightCard
+          title="No monthly budget found"
+          message="Create a monthly budget to receive budget alerts and recommendations."
+          color={colors.secondaryText}
+        />
+      ) : budgetAlerts.length === 0 ? (
+        <InsightCard
+          title="You're within your category budgets"
+          message="No category budget alerts at the moment."
+          color="#10B981"
+        />
+      ) : (
+        budgetAlerts.map((item, index) => (
+          <InsightCard
+            key={`${item.category}-${index}`}
+            title={item.category}
+            message={item.message}
+            color={
+              item.priority === 'high'
+                ? '#EF4444'
+                : item.priority === 'medium'
+                  ? '#F59E0B'
+                  : colors.primary
+            }
+          />
+        ))
+      )}
+
+      {/* SAVINGS OPPORTUNITIES */}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Potential Savings Opportunities
+      </Text>
+
+      {opportunities.length === 0 ? (
+        <InsightCard
+          title="No major increases detected"
+          message="We'll highlight potential savings opportunities when your spending patterns show significant increases."
+          color="#10B981"
+        />
+      ) : (
+        opportunities.map((item, index) => (
+          <InsightCard
+            key={`${item.category}-${index}`}
+            title={item.category}
+            message={item.message}
+            color={colors.primary}
+          />
+        ))
+      )}
+    </View>
+  );
+}
+
+
+
 function EmptyChart({
   colors,
   message = 'Add expenses to generate this chart.',
@@ -883,4 +1228,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
   },
+
+  healthCard: {
+    padding: 20,
+    borderRadius: 18,
+    marginBottom: 25,
+  },
+
+  healthScoreRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 12,
+  },
+
+  healthScore: {
+    fontSize: 34,
+    fontWeight: '800',
+  },
+
+  healthLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  healthProgressBackground: {
+    height: 9,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+
+  healthProgressFill: {
+    height: 9,
+    borderRadius: 10,
+  },
+
+  financialInsightCard: {
+    padding: 17,
+    borderRadius: 14,
+    marginBottom: 12,
+  },
+
+  financialInsightTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 7,
+  },
+
 });
