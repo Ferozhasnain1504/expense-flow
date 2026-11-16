@@ -52,7 +52,7 @@ const startServer = async () => {
     // Start the recurring expense scheduler after DB connection.
     startRecurringExpenseJob();
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`ExpenseFlow server running on port ${PORT}`);
     });
   } catch (error) {
