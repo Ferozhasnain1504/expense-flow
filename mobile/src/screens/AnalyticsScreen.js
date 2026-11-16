@@ -1,6 +1,5 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { fetchFinancialInsights } from '../services/financialInsightsService';
 
 import {
   View,
@@ -9,10 +8,13 @@ import {
   StyleSheet,
   Dimensions,
   Pressable,
+  ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
 import { useTheme } from '../context/ThemeContext';
+import { fetchFinancialInsights } from '../services/financialInsightsService';
 import { PieChart, BarChart } from 'react-native-chart-kit';
 
 const PERIOD_OPTIONS = [
@@ -32,66 +34,66 @@ const CHART_COLORS = [
   '#6366F1',
 ];
 
-const getMonthKey = (date) => {
-  return `${date.getFullYear()}-${date.getMonth()}`;
-};
+const getMonthKey = (date) =>
+  `${date.getFullYear()}-${date.getMonth()}`;
 
-const getMonthStart = (date) => {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-};
+const getMonthStart = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), 1);
 
-const formatCurrency = (amount) => {
-  return `₹${Number(amount || 0).toLocaleString('en-IN', {
+const formatCurrency = (amount) =>
+  `₹${Number(amount || 0).toLocaleString('en-IN', {
     maximumFractionDigits: 0,
   })}`;
-};
 
 export default function AnalyticsScreen() {
   const { transactions } = useExpenses();
   const { theme } = useTheme();
-  const colors = theme.colors;
 
-  const [selectedPeriod, setSelectedPeriod] =
-    useState('Last 6 months');
+  const colors = theme.colors;
+  const isDark = theme.mode === 'dark';
+  const styles = createStyles(colors, isDark);
+
+  const [selectedPeriod, setSelectedPeriod] = useState('Last 6 months');
 
   const [financialInsights, setFinancialInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(true);
   const [insightsError, setInsightsError] = useState(false);
 
   useEffect(() => {
-  const loadFinancialInsights = async () => {
-    try {
-      setInsightsLoading(true);
-      setInsightsError(false);
+    const loadFinancialInsights = async () => {
+      try {
+        setInsightsLoading(true);
+        setInsightsError(false);
 
-      const currentDate = new Date();
+        const currentDate = new Date();
 
-      const data = await fetchFinancialInsights(
-        currentDate.getMonth() + 1,
-        currentDate.getFullYear()
-      );
+        const data = await fetchFinancialInsights(
+          currentDate.getMonth() + 1,
+          currentDate.getFullYear()
+        );
 
-      setFinancialInsights(data);
-    } catch (error) {
-  console.log('FINANCIAL INSIGHTS ERROR:', {
-    message: error.message,
-    status: error.response?.status,
-    response: error.response?.data,
-    url: error.config?.url,
-  });
+        setFinancialInsights(data);
+      } catch (error) {
+        console.log('FINANCIAL INSIGHTS ERROR:', {
+          message: error.message,
+          status: error.response?.status,
+          response: error.response?.data,
+          url: error.config?.url,
+        });
 
-  setInsightsError(true);
-} finally {
-      setInsightsLoading(false);
-    }
-  };
+        setInsightsError(true);
+      } finally {
+        setInsightsLoading(false);
+      }
+    };
 
-  loadFinancialInsights();
-}, []);
+    loadFinancialInsights();
+  }, []);
 
   const now = new Date();
 
-  // Determine the start of the selected reporting period.
+  // REPORTING PERIOD
+
   const periodStart = useMemo(() => {
     const currentMonth = getMonthStart(now);
 
@@ -118,7 +120,8 @@ export default function AnalyticsScreen() {
     return new Date(now.getFullYear(), 0, 1);
   }, [selectedPeriod]);
 
-  // Filter expenses for the selected reporting period.
+  // FILTER TRANSACTIONS
+
   const periodTransactions = useMemo(() => {
     return transactions.filter((item) => {
       const date = new Date(item.date);
@@ -129,13 +132,15 @@ export default function AnalyticsScreen() {
     });
   }, [transactions, periodStart]);
 
-  // Calculate spending for the selected period.
+  // TOTAL SPENDING
+
   const totalExpenses = periodTransactions.reduce(
     (total, item) => total + (Number(item.amount) || 0),
     0
   );
 
-  // Calculate category-wise spending.
+  // CATEGORY TOTALS
+
   const categoryTotals = periodTransactions.reduce(
     (result, item) => {
       const category = item.category || 'Other';
@@ -161,10 +166,10 @@ export default function AnalyticsScreen() {
 
   const highestCategory = categoryData[0];
 
-  // Build monthly spending data for the selected period.
+  // MONTHLY SPENDING DATA
+
   const monthlyData = useMemo(() => {
     const months = [];
-
     let cursor = new Date(periodStart);
 
     while (
@@ -209,7 +214,8 @@ export default function AnalyticsScreen() {
     return months;
   }, [periodStart, periodTransactions]);
 
-  // Calculate current month versus previous month.
+  // MONTHLY COMPARISON
+
   const comparison = useMemo(() => {
     const currentMonth = getMonthStart(now);
 
@@ -252,7 +258,8 @@ export default function AnalyticsScreen() {
     };
   }, [transactions]);
 
-  // Prepare pie chart data.
+  // CHART DATA
+
   const pieChartData = categoryData.map((item, index) => ({
     name: item.category,
     amount: item.amount,
@@ -261,7 +268,6 @@ export default function AnalyticsScreen() {
     legendFontSize: 12,
   }));
 
-  // Chart configuration.
   const chartConfig = {
     backgroundColor: colors.card,
     backgroundGradientFrom: colors.card,
@@ -270,7 +276,7 @@ export default function AnalyticsScreen() {
     color: (opacity = 1) =>
       `rgba(139,92,246,${opacity})`,
     labelColor: (opacity = 1) =>
-      theme.mode === 'dark'
+      isDark
         ? `rgba(255,255,255,${opacity})`
         : `rgba(23,25,35,${opacity})`,
     propsForBackgroundLines: {
@@ -278,6 +284,8 @@ export default function AnalyticsScreen() {
     },
     barPercentage: 0.6,
   };
+
+  const chartWidth = Dimensions.get('window').width - 42;
 
   const comparisonMessage =
     comparison.previousTotal === 0
@@ -299,32 +307,38 @@ export default function AnalyticsScreen() {
 
   return (
     <ScrollView
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
+      style={styles.container}
+      contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
+
       {/* HEADER */}
+
       <View style={styles.header}>
-        <Text style={[styles.heading, { color: colors.text }]}>
+        <Text style={styles.eyebrow}>
+          YOUR FINANCIAL OVERVIEW
+        </Text>
+
+        <Text style={styles.heading}>
           Analytics
         </Text>
 
-        <Text
-          style={[
-            styles.subtitle,
-            { color: colors.secondaryText },
-          ]}
-        >
-          Understand your spending habits
+        <Text style={styles.subtitle}>
+          Understand your spending habits and make smarter decisions.
         </Text>
       </View>
 
       {/* REPORTING PERIOD */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Reporting Period
-      </Text>
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>
+          Reporting Period
+        </Text>
+      </View>
 
       <ScrollView
         horizontal
@@ -340,22 +354,13 @@ export default function AnalyticsScreen() {
               onPress={() => setSelectedPeriod(period)}
               style={[
                 styles.periodButton,
-                {
-                  backgroundColor: selected
-                    ? colors.primary
-                    : colors.card,
-                  borderColor: colors.border,
-                },
+                selected && styles.selectedPeriodButton,
               ]}
             >
               <Text
                 style={[
                   styles.periodText,
-                  {
-                    color: selected
-                      ? '#FFFFFF'
-                      : colors.secondaryText,
-                  },
+                  selected && styles.selectedPeriodText,
                 ]}
               >
                 {period}
@@ -366,102 +371,78 @@ export default function AnalyticsScreen() {
       </ScrollView>
 
       {/* TOTAL SPENDING */}
-      <View
-        style={[
-          styles.summaryCard,
-          { backgroundColor: colors.card },
-        ]}
-      >
-        <Text
-          style={[
-            styles.summaryLabel,
-            { color: colors.secondaryText },
-          ]}
-        >
-          Total Spending
-        </Text>
 
-        <Text style={[styles.summaryAmount, { color: colors.text }]}>
-          {formatCurrency(totalExpenses)}
-        </Text>
+      <View style={styles.summaryCard}>
+        <View style={styles.summaryTopRow}>
+          <View>
+            <Text style={styles.summaryLabel}>
+              TOTAL SPENDING
+            </Text>
 
-        <Text style={styles.summaryCaption}>
-          {periodTransactions.length} transactions in {selectedPeriod.toLowerCase()}
-        </Text>
+            <Text style={styles.summaryAmount}>
+              {formatCurrency(totalExpenses)}
+            </Text>
+
+            <Text style={styles.summaryCaption}>
+              {periodTransactions.length} transactions · {selectedPeriod}
+            </Text>
+          </View>
+
+          <View style={styles.summaryIcon}>
+            <Text style={styles.summaryIconText}>₹</Text>
+          </View>
+        </View>
       </View>
 
-            {/* SMART FINANCIAL INSIGHTS */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Smart Financial Insights
-      </Text>
+      {/* SMART FINANCIAL INSIGHTS */}
+
+      <SectionHeading
+        title="Smart Financial Insights"
+        subtitle="Personalised observations from your spending data"
+        styles={styles}
+      />
 
       <FinancialInsightsSection
         insights={financialInsights}
         loading={insightsLoading}
         error={insightsError}
         colors={colors}
+        styles={styles}
         formatCurrency={formatCurrency}
       />
 
       {/* MONTHLY COMPARISON */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Monthly Comparison
-      </Text>
 
-      <View
-        style={[
-          styles.comparisonCard,
-          { backgroundColor: colors.card },
-        ]}
-      >
+      <SectionHeading
+        title="Monthly Comparison"
+        subtitle="Compare your current and previous month"
+        styles={styles}
+      />
+
+      <View style={styles.comparisonCard}>
         <View style={styles.comparisonRow}>
           <View style={styles.comparisonColumn}>
-            <Text
-              style={[
-                styles.comparisonLabel,
-                { color: colors.secondaryText },
-              ]}
-            >
-              This Month
+            <Text style={styles.comparisonLabel}>
+              THIS MONTH
             </Text>
 
-            <Text
-              style={[
-                styles.comparisonAmount,
-                { color: colors.text },
-              ]}
-            >
+            <Text style={styles.comparisonAmount}>
               {formatCurrency(comparison.currentTotal)}
             </Text>
           </View>
 
           <View style={styles.comparisonColumn}>
-            <Text
-              style={[
-                styles.comparisonLabel,
-                { color: colors.secondaryText },
-              ]}
-            >
-              Previous Month
+            <Text style={styles.comparisonLabel}>
+              PREVIOUS MONTH
             </Text>
 
-            <Text
-              style={[
-                styles.comparisonAmount,
-                { color: colors.text },
-              ]}
-            >
+            <Text style={styles.comparisonAmount}>
               {formatCurrency(comparison.previousTotal)}
             </Text>
           </View>
         </View>
 
-        <View
-          style={[
-            styles.comparisonDivider,
-            { backgroundColor: colors.border },
-          ]}
-        />
+        <View style={styles.divider} />
 
         <Text
           style={[
@@ -473,12 +454,7 @@ export default function AnalyticsScreen() {
         </Text>
 
         {comparison.previousTotal > 0 && (
-          <Text
-            style={[
-              styles.comparisonDifference,
-              { color: colors.secondaryText },
-            ]}
-          >
+          <Text style={styles.comparisonDifference}>
             {comparison.difference > 0 ? '+' : ''}
             {formatCurrency(comparison.difference)} compared with last month
           </Text>
@@ -486,17 +462,15 @@ export default function AnalyticsScreen() {
       </View>
 
       {/* MONTHLY SPENDING TREND */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Monthly Spending Trend
-      </Text>
+
+      <SectionHeading
+        title="Monthly Spending Trend"
+        subtitle="Track how your expenses change over time"
+        styles={styles}
+      />
 
       {monthlyData.some((item) => item.amount > 0) ? (
-        <View
-          style={[
-            styles.chartCard,
-            { backgroundColor: colors.card },
-          ]}
-        >
+        <View style={styles.chartCard}>
           <BarChart
             data={{
               labels: monthlyData.map((item) => item.label),
@@ -506,7 +480,7 @@ export default function AnalyticsScreen() {
                 },
               ],
             }}
-            width={Dimensions.get('window').width - 40}
+            width={chartWidth-20}
             height={250}
             yAxisLabel="₹"
             yAxisSuffix=""
@@ -519,71 +493,44 @@ export default function AnalyticsScreen() {
       ) : (
         <EmptyChart
           colors={colors}
+          styles={styles}
           message="No monthly spending data for this period."
         />
       )}
 
-      {/* TOP SPENDING CATEGORY */}
-      <View
-        style={[
-          styles.insightCard,
-          {
-            backgroundColor: theme.mode === 'dark'
-              ? '#25213F'
-              : '#EDE9FE',
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.insightLabel,
-            {
-              color: theme.mode === 'dark'
-                ? '#B9A7EA'
-                : '#6D28D9',
-            },
-          ]}
-        >
-          Top Spending Category
+      {/* TOP CATEGORY */}
+
+      <View style={styles.topCategoryCard}>
+        <Text style={styles.topCategoryLabel}>
+          TOP SPENDING CATEGORY
         </Text>
 
-        <Text style={[styles.insightValue, { color: colors.text }]}>
+        <Text style={styles.topCategoryValue}>
           {highestCategory
             ? highestCategory.category
             : 'No data yet'}
         </Text>
 
-        <Text
-          style={[
-            styles.insightAmount,
-            {
-              color: theme.mode === 'dark'
-                ? '#C4B5FD'
-                : '#7C3AED',
-            },
-          ]}
-        >
+        <Text style={styles.topCategoryAmount}>
           {highestCategory
             ? formatCurrency(highestCategory.amount)
             : 'Add expenses to see insights'}
         </Text>
       </View>
 
-      {/* PIE CHART */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Spending Distribution
-      </Text>
+      {/* SPENDING DISTRIBUTION */}
+
+      <SectionHeading
+        title="Spending Distribution"
+        subtitle="See how your money is divided across categories"
+        styles={styles}
+      />
 
       {pieChartData.length > 0 ? (
-        <View
-          style={[
-            styles.chartCard,
-            { backgroundColor: colors.card },
-          ]}
-        >
+        <View style={styles.chartCard}>
           <PieChart
             data={pieChartData}
-            width={Dimensions.get('window').width - 40}
+            width={chartWidth}
             height={220}
             accessor="amount"
             backgroundColor="transparent"
@@ -593,21 +540,19 @@ export default function AnalyticsScreen() {
           />
         </View>
       ) : (
-        <EmptyChart colors={colors} />
+        <EmptyChart colors={colors} styles={styles} />
       )}
 
       {/* CATEGORY COMPARISON */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Category Comparison
-      </Text>
+
+      <SectionHeading
+        title="Category Comparison"
+        subtitle="Compare spending amounts across categories"
+        styles={styles}
+      />
 
       {categoryData.length > 0 ? (
-        <View
-          style={[
-            styles.chartCard,
-            { backgroundColor: colors.card },
-          ]}
-        >
+        <View style={styles.chartCard}>
           <BarChart
             data={{
               labels: categoryData.map((item) => item.category),
@@ -617,7 +562,7 @@ export default function AnalyticsScreen() {
                 },
               ],
             }}
-            width={Dimensions.get('window').width - 40}
+            width={chartWidth}
             height={250}
             yAxisLabel="₹"
             yAxisSuffix=""
@@ -628,31 +573,26 @@ export default function AnalyticsScreen() {
           />
         </View>
       ) : (
-        <EmptyChart colors={colors} />
+        <EmptyChart colors={colors} styles={styles} />
       )}
 
       {/* CATEGORY BREAKDOWN */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Category Breakdown
-      </Text>
+
+      <SectionHeading
+        title="Category Breakdown"
+        subtitle="A detailed look at where your money goes"
+        styles={styles}
+      />
 
       {categoryData.length === 0 ? (
-        <View
-          style={[
-            styles.emptyState,
-            { backgroundColor: colors.card },
-          ]}
-        >
-          <Text style={[styles.emptyText, { color: colors.text }]}>
-            No spending data yet.
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>📊</Text>
+
+          <Text style={styles.emptyTitle}>
+            No spending data yet
           </Text>
 
-          <Text
-            style={[
-              styles.emptySubtext,
-              { color: colors.secondaryText },
-            ]}
-          >
+          <Text style={styles.emptyText}>
             Add expenses to see analytics for this period.
           </Text>
         </View>
@@ -660,37 +600,31 @@ export default function AnalyticsScreen() {
         categoryData.map((item, index) => (
           <View
             key={item.category}
-            style={[
-              styles.categoryCard,
-              { backgroundColor: colors.card },
-            ]}
+            style={styles.categoryCard}
           >
             <View style={styles.categoryHeader}>
-              <Text
-                style={[
-                  styles.categoryName,
-                  { color: colors.text },
-                ]}
-              >
-                {item.category}
-              </Text>
+              <View style={styles.categoryNameRow}>
+                <View
+                  style={[
+                    styles.categoryDot,
+                    {
+                      backgroundColor:
+                        CHART_COLORS[index % CHART_COLORS.length],
+                    },
+                  ]}
+                />
 
-              <Text
-                style={[
-                  styles.categoryAmount,
-                  { color: colors.text },
-                ]}
-              >
+                <Text style={styles.categoryName}>
+                  {item.category}
+                </Text>
+              </View>
+
+              <Text style={styles.categoryAmount}>
                 {formatCurrency(item.amount)}
               </Text>
             </View>
 
-            <View
-              style={[
-                styles.progressBackground,
-                { backgroundColor: colors.surface },
-              ]}
-            >
+            <View style={styles.progressBackground}>
               <View
                 style={[
                   styles.progressFill,
@@ -703,38 +637,50 @@ export default function AnalyticsScreen() {
               />
             </View>
 
-            <Text
-              style={[
-                styles.percentageText,
-                { color: colors.secondaryText },
-              ]}
-            >
+            <Text style={styles.percentageText}>
               {item.percentage.toFixed(1)}% of total spending
             </Text>
           </View>
         ))
       )}
+
+      <View style={styles.bottomNote}>
+        <Text style={styles.bottomNoteText}>
+          Your financial journey starts with understanding your spending.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
 
+// REUSABLE SECTION HEADING
+
+function SectionHeading({ title, subtitle, styles }) {
+  return (
+    <View style={styles.sectionHeading}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {subtitle ? (
+        <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+// FINANCIAL INSIGHTS
 
 function FinancialInsightsSection({
   insights,
   loading,
   error,
   colors,
+  styles,
   formatCurrency,
 }) {
   if (loading) {
     return (
-      <View
-        style={[
-          styles.emptyState,
-          { backgroundColor: colors.card },
-        ]}
-      >
-        <Text style={{ color: colors.secondaryText }}>
+      <View style={styles.emptyState}>
+        <ActivityIndicator color={colors.primary} size="small" />
+        <Text style={styles.emptyText}>
           Analysing your spending...
         </Text>
       </View>
@@ -743,14 +689,13 @@ function FinancialInsightsSection({
 
   if (error || !insights) {
     return (
-      <View
-        style={[
-          styles.emptyState,
-          { backgroundColor: colors.card },
-        ]}
-      >
-        <Text style={{ color: colors.secondaryText }}>
-          Unable to load financial insights.
+      <View style={styles.emptyState}>
+        <Text style={styles.emptyIcon}>⚠️</Text>
+        <Text style={styles.emptyTitle}>
+          Insights unavailable
+        </Text>
+        <Text style={styles.emptyText}>
+          Unable to load financial insights. Please try again later.
         </Text>
       </View>
     );
@@ -784,55 +729,74 @@ function FinancialInsightsSection({
   const opportunities = insights.savingsOpportunities || [];
 
   const InsightCard = ({ title, message, color }) => (
-    <View
-      style={[
-        styles.financialInsightCard,
-        { backgroundColor: colors.card },
-      ]}
-    >
-      <Text style={[styles.financialInsightTitle, { color }]}>
-        {title}
-      </Text>
+    <View style={styles.financialInsightCard}>
+      <View
+        style={[
+          styles.insightAccent,
+          { backgroundColor: color },
+        ]}
+      />
 
-      <Text style={{ color: colors.secondaryText, lineHeight: 21 }}>
-        {message}
-      </Text>
+      <View style={styles.insightContent}>
+        <Text
+          style={[
+            styles.financialInsightTitle,
+            { color },
+          ]}
+        >
+          {title}
+        </Text>
+
+        <Text style={styles.financialInsightMessage}>
+          {message}
+        </Text>
+      </View>
     </View>
   );
 
   return (
     <View>
-      {/* SPENDING HEALTH SCORE */}
-      <View
-        style={[
-          styles.healthCard,
-          { backgroundColor: colors.card },
-        ]}
-      >
-        <Text style={{ color: colors.secondaryText, fontSize: 13 }}>
+      {/* HEALTH SCORE */}
+
+      <View style={styles.healthCard}>
+        <Text style={styles.healthEyebrow}>
           SPENDING HEALTH SCORE
         </Text>
 
         <View style={styles.healthScoreRow}>
-          <Text style={[styles.healthScore, { color: healthColor }]}>
+          <Text
+            style={[
+              styles.healthScore,
+              { color: healthColor },
+            ]}
+          >
             {score === null ? 'N/A' : `${score}/100`}
           </Text>
 
-          <Text style={[styles.healthLabel, { color: healthColor }]}>
-            {score === null
-              ? 'Insufficient data'
-              : isPartialScore
-                ? 'Partial score'
-                : health?.label || 'Not available'}
-          </Text>
+          <View
+            style={[
+              styles.healthBadge,
+              {
+                backgroundColor: `${healthColor}18`,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.healthLabel,
+                { color: healthColor },
+              ]}
+            >
+              {score === null
+                ? 'Insufficient data'
+                : isPartialScore
+                  ? 'Partial score'
+                  : health?.label || 'Not available'}
+            </Text>
+          </View>
         </View>
 
-        <View
-          style={[
-            styles.healthProgressBackground,
-            { backgroundColor: colors.surface },
-          ]}
-        >
+        <View style={styles.healthProgressBackground}>
           <View
             style={[
               styles.healthProgressFill,
@@ -844,7 +808,7 @@ function FinancialInsightsSection({
           />
         </View>
 
-        <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+        <Text style={styles.healthDescription}>
           {isPartialScore
             ? `Based on ${availableComponents} of 3 available components. This is not a complete financial health assessment.`
             : score === null
@@ -852,7 +816,7 @@ function FinancialInsightsSection({
               : 'Based on budget adherence, spending trends and consistency.'}
         </Text>
 
-        <View style={{ marginTop: 12, gap: 8 }}>
+        <View style={styles.componentList}>
           {[
             {
               label: 'Budget management',
@@ -872,16 +836,13 @@ function FinancialInsightsSection({
           ].map((item) => (
             <View
               key={item.label}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-              }}
+              style={styles.componentRow}
             >
-              <Text style={{ color: colors.secondaryText, fontSize: 12 }}>
+              <Text style={styles.componentLabel}>
                 {item.label}
               </Text>
 
-              <Text style={{ color: colors.text, fontSize: 12 }}>
+              <Text style={styles.componentValue}>
                 {item.available && item.value !== null
                   ? `${item.value}/100`
                   : 'Insufficient data'}
@@ -892,14 +853,17 @@ function FinancialInsightsSection({
       </View>
 
       {/* SPENDING TRENDS */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+
+      <Text style={styles.insightSectionTitle}>
         Spending Trends
       </Text>
 
       {trends.length === 0 ? (
-        <Text style={{ color: colors.secondaryText, marginBottom: 20 }}>
-          Not enough spending data to identify trends yet.
-        </Text>
+        <InsightCard
+          title="Building your spending history"
+          message="Not enough spending data to identify trends yet."
+          color={colors.secondaryText}
+        />
       ) : (
         trends.map((item, index) => (
           <InsightCard
@@ -932,7 +896,8 @@ function FinancialInsightsSection({
       )}
 
       {/* UNUSUAL EXPENSES */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+
+      <Text style={styles.insightSectionTitle}>
         Unusual Expenses
       </Text>
 
@@ -954,7 +919,8 @@ function FinancialInsightsSection({
       )}
 
       {/* BUDGET ALERTS */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+
+      <Text style={styles.insightSectionTitle}>
         Budget Alerts
       </Text>
 
@@ -988,7 +954,8 @@ function FinancialInsightsSection({
       )}
 
       {/* SAVINGS OPPORTUNITIES */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+
+      <Text style={styles.insightSectionTitle}>
         Potential Savings Opportunities
       </Text>
 
@@ -1012,268 +979,515 @@ function FinancialInsightsSection({
   );
 }
 
-
+// EMPTY CHART
 
 function EmptyChart({
   colors,
+  styles,
   message = 'Add expenses to generate this chart.',
 }) {
   return (
-    <View
-      style={[
-        styles.emptyState,
-        {
-          backgroundColor: colors.card,
-          marginBottom: 28,
-        },
-      ]}
-    >
-      <Text style={{ color: colors.secondaryText }}>
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyIcon}>📊</Text>
+
+      <Text style={styles.emptyText}>
         {message}
       </Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
+// THEME-AWARE STYLES
 
-  header: {
-    marginTop: 45,
-    marginBottom: 24,
-  },
+const createStyles = (colors, isDark) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 52,
+      paddingBottom: 40,
+    },
 
-  subtitle: {
-    fontSize: 14,
-    marginTop: 6,
-  },
+    // HEADER
 
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
+    header: {
+      marginBottom: 28,
+    },
 
-  periodContainer: {
-    marginBottom: 20,
-    flexGrow: 0,
-  },
+    eyebrow: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1.5,
+      marginBottom: 9,
+    },
 
-  periodButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 11,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginRight: 9,
-  },
+    heading: {
+      color: colors.text,
+      fontSize: 30,
+      fontWeight: '800',
+    },
 
-  periodText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
+    subtitle: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      lineHeight: 20,
+      marginTop: 8,
+    },
 
-  summaryCard: {
-    padding: 22,
-    borderRadius: 18,
-    marginBottom: 28,
-  },
+    // SECTION HEADINGS
 
-  summaryLabel: {
-    fontSize: 14,
-  },
+    sectionHeading: {
+      marginTop: 27,
+      marginBottom: 15,
+    },
 
-  summaryAmount: {
-    fontSize: 30,
-    fontWeight: '700',
-    marginTop: 10,
-  },
+    sectionHeader: {
+      marginBottom: 13,
+    },
 
-  summaryCaption: {
-    color: '#A78BFA',
-    fontSize: 12,
-    marginTop: 8,
-  },
+    sectionTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '800',
+    },
 
-  comparisonCard: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 30,
-  },
+    sectionSubtitle: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      marginTop: 5,
+      lineHeight: 17,
+    },
 
-  comparisonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+    // REPORTING PERIOD
 
-  comparisonColumn: {
-    flex: 1,
-  },
+    periodContainer: {
+      marginBottom: 22,
+      flexGrow: 0,
+    },
 
-  comparisonLabel: {
-    fontSize: 12,
-  },
+    periodButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 11,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.card,
+      marginRight: 9,
+    },
 
-  comparisonAmount: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 8,
-  },
+    selectedPeriodButton: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
 
-  comparisonDivider: {
-    height: 1,
-    marginVertical: 17,
-  },
+    periodText: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      fontWeight: '700',
+    },
 
-  comparisonMessage: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
+    selectedPeriodText: {
+      color: '#FFFFFF',
+    },
 
-  comparisonDifference: {
-    fontSize: 12,
-    marginTop: 6,
-  },
+    // SUMMARY CARD
 
-  chartCard: {
-    borderRadius: 18,
-    paddingVertical: 15,
-    marginBottom: 28,
-    alignItems: 'center',
-  },
+    summaryCard: {
+      backgroundColor: colors.primary,
+      padding: 23,
+      borderRadius: 23,
+      marginBottom: 5,
+      elevation: 4,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 9,
+    },
 
-  chart: {
-    borderRadius: 14,
-  },
+    summaryTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
 
-  insightCard: {
-    padding: 20,
-    borderRadius: 16,
-    marginBottom: 30,
-  },
+    summaryLabel: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1.2,
+      opacity: 0.9,
+    },
 
-  insightLabel: {
-    fontSize: 13,
-  },
+    summaryAmount: {
+      color: '#FFFFFF',
+      fontSize: 31,
+      fontWeight: '800',
+      marginTop: 12,
+    },
 
-  insightValue: {
-    fontSize: 21,
-    fontWeight: '700',
-    marginTop: 8,
-  },
+    summaryCaption: {
+      color: '#FFFFFF',
+      opacity: 0.85,
+      fontSize: 11,
+      marginTop: 8,
+    },
 
-  insightAmount: {
-    fontSize: 14,
-    marginTop: 5,
-  },
+    summaryIcon: {
+      width: 53,
+      height: 53,
+      borderRadius: 18,
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
 
-  categoryCard: {
-    padding: 17,
-    borderRadius: 14,
-    marginBottom: 13,
-  },
+    summaryIconText: {
+      color: '#FFFFFF',
+      fontSize: 26,
+      fontWeight: '800',
+    },
 
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 13,
-  },
+    // COMPARISON
 
-  categoryName: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
+    comparisonCard: {
+      backgroundColor: colors.card,
+      borderRadius: 19,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
 
-  categoryAmount: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+    comparisonRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
 
-  progressBackground: {
-    height: 9,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
+    comparisonColumn: {
+      flex: 1,
+    },
 
-  progressFill: {
-    height: 9,
-    borderRadius: 10,
-  },
+    comparisonLabel: {
+      color: colors.secondaryText,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 0.7,
+    },
 
-  percentageText: {
-    fontSize: 11,
-    marginTop: 8,
-  },
+    comparisonAmount: {
+      color: colors.text,
+      fontSize: 19,
+      fontWeight: '800',
+      marginTop: 10,
+    },
 
-  emptyState: {
-    padding: 25,
-    alignItems: 'center',
-    borderRadius: 14,
-    marginBottom: 28,
-  },
+    divider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 17,
+    },
 
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+    comparisonMessage: {
+      fontSize: 13,
+      fontWeight: '800',
+    },
 
-  emptySubtext: {
-    fontSize: 13,
-    marginTop: 8,
-  },
+    comparisonDifference: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      marginTop: 7,
+    },
 
-  healthCard: {
-    padding: 20,
-    borderRadius: 18,
-    marginBottom: 25,
-  },
+    // CHARTS
 
-  healthScoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
+    chartCard: {
+      backgroundColor: colors.card,
+      borderRadius: 19,
+      paddingVertical: 15,
+      paddingHorizontal: 5,
+      marginBottom: 5,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
 
-  healthScore: {
-    fontSize: 34,
-    fontWeight: '800',
-  },
+    chart: {
+      borderRadius: 14,
+    },
 
-  healthLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
+    // TOP CATEGORY
 
-  healthProgressBackground: {
-    height: 9,
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 12,
-  },
+    topCategoryCard: {
+      backgroundColor: isDark ? '#25213F' : '#EDE9FE',
+      padding: 21,
+      borderRadius: 19,
+      marginTop: 25,
+    },
 
-  healthProgressFill: {
-    height: 9,
-    borderRadius: 10,
-  },
+    topCategoryLabel: {
+      color: isDark ? '#B9A7EA' : '#6D28D9',
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
 
-  financialInsightCard: {
-    padding: 17,
-    borderRadius: 14,
-    marginBottom: 12,
-  },
+    topCategoryValue: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: '800',
+      marginTop: 11,
+    },
 
-  financialInsightTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 7,
-  },
+    topCategoryAmount: {
+      color: isDark ? '#C4B5FD' : '#7C3AED',
+      fontSize: 14,
+      fontWeight: '700',
+      marginTop: 6,
+    },
 
-});
+    // CATEGORY BREAKDOWN
+
+    categoryCard: {
+      backgroundColor: colors.card,
+      padding: 17,
+      borderRadius: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+
+    categoryHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 13,
+    },
+
+    categoryNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+
+    categoryDot: {
+      width: 9,
+      height: 9,
+      borderRadius: 5,
+      marginRight: 9,
+    },
+
+    categoryName: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+
+    categoryAmount: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+
+    progressBackground: {
+      height: 8,
+      borderRadius: 10,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+    },
+
+    progressFill: {
+      height: 8,
+      borderRadius: 10,
+    },
+
+    percentageText: {
+      color: colors.secondaryText,
+      fontSize: 10,
+      marginTop: 9,
+    },
+
+    // EMPTY STATES
+
+    emptyState: {
+      backgroundColor: colors.card,
+      padding: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 17,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 12,
+    },
+
+    emptyIcon: {
+      fontSize: 25,
+      marginBottom: 10,
+    },
+
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '800',
+      marginBottom: 6,
+      textAlign: 'center',
+    },
+
+    emptyText: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      textAlign: 'center',
+      lineHeight: 19,
+    },
+
+    // FINANCIAL HEALTH
+
+    healthCard: {
+      backgroundColor: colors.card,
+      padding: 20,
+      borderRadius: 19,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 20,
+    },
+
+    healthEyebrow: {
+      color: colors.secondaryText,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
+
+    healthScoreRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginVertical: 13,
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+
+    healthScore: {
+      fontSize: 34,
+      fontWeight: '900',
+    },
+
+    healthBadge: {
+      paddingHorizontal: 11,
+      paddingVertical: 7,
+      borderRadius: 10,
+    },
+
+    healthLabel: {
+      fontSize: 11,
+      fontWeight: '800',
+    },
+
+    healthProgressBackground: {
+      height: 9,
+      borderRadius: 10,
+      overflow: 'hidden',
+      backgroundColor: colors.surface,
+      marginBottom: 13,
+    },
+
+    healthProgressFill: {
+      height: 9,
+      borderRadius: 10,
+    },
+
+    healthDescription: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      lineHeight: 18,
+    },
+
+    componentList: {
+      marginTop: 17,
+      gap: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingTop: 15,
+    },
+
+    componentRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 10,
+    },
+
+    componentLabel: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      flex: 1,
+    },
+
+    componentValue: {
+      color: colors.text,
+      fontSize: 11,
+      fontWeight: '700',
+      textAlign: 'right',
+    },
+
+    // INSIGHT CARDS
+
+    insightSectionTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '800',
+      marginTop: 22,
+      marginBottom: 12,
+    },
+
+    financialInsightCard: {
+      backgroundColor: colors.card,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 10,
+      flexDirection: 'row',
+      overflow: 'hidden',
+    },
+
+    insightAccent: {
+      width: 4,
+    },
+
+    insightContent: {
+      flex: 1,
+      padding: 15,
+    },
+
+    financialInsightTitle: {
+      fontSize: 13,
+      fontWeight: '800',
+      marginBottom: 6,
+    },
+
+    financialInsightMessage: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      lineHeight: 18,
+    },
+
+    // FOOTER
+
+    bottomNote: {
+      marginTop: 23,
+      paddingVertical: 17,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+
+    bottomNoteText: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      lineHeight: 18,
+      textAlign: 'center',
+    },
+  });
