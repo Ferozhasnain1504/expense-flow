@@ -9,6 +9,7 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 
 import { useTheme } from '../context/ThemeContext';
@@ -76,181 +77,331 @@ export default function ProfileScreen({ navigation }) {
     );
   };
 
+  const firstLetter = user?.name?.charAt(0)?.toUpperCase() || 'U';
+
   return (
-    <ScrollView
+    <View
       style={[
         styles.container,
         { backgroundColor: colors.background },
       ]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
     >
-      <Text style={[styles.heading, { color: colors.text }]}>
-        My Profile
-      </Text>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
 
-      <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
-        Manage your account
-      </Text>
-
-      {/* Profile Card */}
-      <View
-        style={[
-          styles.profileCard,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[
-            styles.avatar,
-            { backgroundColor: colors.primary },
-          ]}
-        >
-          <Text style={styles.avatarText}>
-            {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-          </Text>
-        </View>
-
-        {loading ? (
-          <ActivityIndicator color={colors.primary} />
-        ) : (
-          <>
-            <Text style={[styles.name, { color: colors.text }]}>
-              {user?.name || 'User'}
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={[styles.eyebrow, { color: colors.primary }]}>
+              YOUR ACCOUNT
             </Text>
 
-            <Text style={[styles.email, { color: colors.secondaryText }]}>
-              {user?.email || 'Email unavailable'}
+            <Text style={[styles.heading, { color: colors.text }]}>
+              Profile
+            </Text>
+
+            <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
+              Manage your account and preferences
+            </Text>
+          </View>
+
+          <View
+            style={[
+              styles.headerIcon,
+              { backgroundColor: colors.surface },
+            ]}
+          >
+            <Text style={{ fontSize: 21 }}>⚙️</Text>
+          </View>
+        </View>
+
+        {/* Profile Card */}
+        <View
+          style={[
+            styles.profileCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.profileTop}>
+            <View
+              style={[
+                styles.avatar,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <Text style={styles.avatarText}>{firstLetter}</Text>
+            </View>
+
+            <View style={styles.profileInfo}>
+              {loading ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <>
+                  <Text
+                    style={[styles.name, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
+                    {user?.name || 'User'}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.email,
+                      { color: colors.secondaryText },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {user?.email || 'Email unavailable'}
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <View
+              style={[
+                styles.verifiedIcon,
+                { backgroundColor: colors.surface },
+              ]}
+            >
+              <Text style={{ fontSize: 16 }}>✓</Text>
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.profileDivider,
+              { backgroundColor: colors.border },
+            ]}
+          />
+
+          <View style={styles.accountFooter}>
+            <View style={styles.accountStatus}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: '#22C55E' },
+                ]}
+              />
+
+              <Text
+                style={[
+                  styles.accountStatusText,
+                  { color: colors.secondaryText },
+                ]}
+              >
+                Account active
+              </Text>
+            </View>
+
+            <Text style={[styles.accountType, { color: colors.primary }]}>
+              EXPENSEFLOW
+            </Text>
+          </View>
+        </View>
+
+        {/* Account Section */}
+        <SectionHeader title="Account" colors={colors} />
+
+        <View
+          style={[
+            styles.menuCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <MenuItem
+            icon="👤"
+            title="Personal Information"
+            subtitle="Your profile details"
+            colors={colors}
+          />
+
+          <MenuItem
+            icon="🔒"
+            title="Security"
+            subtitle="Account security settings"
+            colors={colors}
+          />
+
+          <MenuItem
+            icon="🔔"
+            title="Notifications"
+            subtitle="Manage bill reminders"
+            colors={colors}
+            isLast
+          />
+        </View>
+
+        {/* Preferences Section */}
+        <SectionHeader title="Preferences" colors={colors} />
+
+        <View
+          style={[
+            styles.menuCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Pressable
+            style={[
+              styles.menuItem,
+              { borderBottomColor: colors.border },
+            ]}
+            onPress={toggleTheme}
+          >
+            <View
+              style={[
+                styles.menuIconContainer,
+                { backgroundColor: colors.surface },
+              ]}
+            >
+              <Text style={styles.menuIcon}>🎨</Text>
+            </View>
+
+            <View style={styles.menuInfo}>
+              <Text style={[styles.menuTitle, { color: colors.text }]}>
+                Appearance
+              </Text>
+
+              <Text
+                style={[
+                  styles.menuSubtitle,
+                  { color: colors.secondaryText },
+                ]}
+              >
+                Customize your app theme
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.valueBadge,
+                { backgroundColor: colors.surface },
+              ]}
+            >
+              <Text style={[styles.valueText, { color: colors.primary }]}>
+                {isDark ? 'Dark' : 'Light'}
+              </Text>
+            </View>
+
+            <Text style={[styles.arrow, { color: colors.secondaryText }]}>
+              ›
+            </Text>
+          </Pressable>
+
+          <MenuItem
+            icon="💰"
+            title="Currency"
+            subtitle="Indian Rupee (₹)"
+            colors={colors}
+          />
+
+          <MenuItem
+            icon="❓"
+            title="Help & Support"
+            subtitle="Get assistance"
+            colors={colors}
+            isLast
+          />
+        </View>
+
+        {/* App Information */}
+        <View
+          style={[
+            styles.appCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.appLogo,
+              { backgroundColor: colors.surface },
+            ]}
+          >
+            <Text style={{ fontSize: 25 }}>💸</Text>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.appName, { color: colors.text }]}>
+              ExpenseFlow
             </Text>
 
             <Text
               style={[
-                styles.accountBadge,
-                {
-                  color: colors.primary,
-                  backgroundColor: colors.surface,
-                },
+                styles.appDescription,
+                { color: colors.secondaryText },
               ]}
             >
-              Verified Account
+              Take control of your money.
             </Text>
-          </>
-        )}
-      </View>
+          </View>
 
-      {/* Account Section */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Account
-      </Text>
+          <Text style={[styles.versionBadge, { color: colors.primary }]}>
+            v1.0.0
+          </Text>
+        </View>
 
-      <View
-        style={[
-          styles.menuCard,
-          { backgroundColor: colors.card },
-        ]}
-      >
-        <MenuItem
-          icon="👤"
-          title="Personal Information"
-          colors={colors}
-        />
-
-        <MenuItem
-          icon="🔒"
-          title="Security"
-          colors={colors}
-        />
-
-        <MenuItem
-          icon="🔔"
-          title="Notifications"
-          colors={colors}
-          isLast
-        />
-      </View>
-
-      {/* Preferences Section */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Preferences
-      </Text>
-
-      <View
-        style={[
-          styles.menuCard,
-          { backgroundColor: colors.card },
-        ]}
-      >
+        {/* Logout */}
         <Pressable
-          style={[
-            styles.menuItem,
-            { borderBottomColor: colors.border },
+          style={({ pressed }) => [
+            styles.logoutButton,
+            {
+              backgroundColor: isDark ? '#351D2A' : '#FEE2E2',
+              opacity: pressed ? 0.75 : 1,
+            },
           ]}
-          onPress={toggleTheme}
+          onPress={handleLogout}
         >
-          <Text style={styles.menuIcon}>🎨</Text>
+          <Text style={styles.logoutIcon}>↪</Text>
 
-          <Text style={[styles.menuTitle, { color: colors.text }]}>
-            Appearance
-          </Text>
-
-          <Text style={[styles.themeValue, { color: colors.primary }]}>
-            {isDark ? 'Dark' : 'Light'}
-          </Text>
-
-          <Text style={[styles.arrow, { color: colors.secondaryText }]}>
-            ›
+          <Text style={[styles.logoutText, { color: colors.danger }]}>
+            Log Out
           </Text>
         </Pressable>
 
-        <MenuItem
-          icon="💰"
-          title="Currency: INR (₹)"
-          colors={colors}
-        />
-
-        <MenuItem
-          icon="❓"
-          title="Help & Support"
-          colors={colors}
-          isLast
-        />
-      </View>
-
-      {/* Logout */}
-      <Pressable
-        style={[
-          styles.logoutButton,
-          {
-            backgroundColor: theme.mode === 'dark'
-              ? '#351D2A'
-              : '#FEE2E2',
-          },
-        ]}
-        onPress={handleLogout}
-      >
-        <Text
-          style={[
-            styles.logoutText,
-            { color: colors.danger },
-          ]}
-        >
-          Logout
+        <Text style={[styles.footer, { color: colors.secondaryText }]}>
+          Made with care for better financial habits
         </Text>
-      </Pressable>
-
-      <Text style={[styles.version, { color: colors.secondaryText }]}>
-        ExpenseFlow · Version 1.0.0
-      </Text>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
-function MenuItem({ icon, title, colors, isLast = false }) {
+function SectionHeader({ title, colors }) {
   return (
-    <Pressable
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function MenuItem({
+  icon,
+  title,
+  subtitle,
+  colors,
+  isLast = false,
+}) {
+  return (
+    <View
       style={[
         styles.menuItem,
         {
@@ -259,16 +410,34 @@ function MenuItem({ icon, title, colors, isLast = false }) {
         },
       ]}
     >
-      <Text style={styles.menuIcon}>{icon}</Text>
+      <View
+        style={[
+          styles.menuIconContainer,
+          { backgroundColor: colors.surface },
+        ]}
+      >
+        <Text style={styles.menuIcon}>{icon}</Text>
+      </View>
 
-      <Text style={[styles.menuTitle, { color: colors.text }]}>
-        {title}
-      </Text>
+      <View style={styles.menuInfo}>
+        <Text style={[styles.menuTitle, { color: colors.text }]}>
+          {title}
+        </Text>
+
+        <Text
+          style={[
+            styles.menuSubtitle,
+            { color: colors.secondaryText },
+          ]}
+        >
+          {subtitle}
+        </Text>
+      </View>
 
       <Text style={[styles.arrow, { color: colors.secondaryText }]}>
         ›
       </Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -278,118 +447,249 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 55,
     paddingBottom: 35,
   },
 
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginTop: 45,
-  },
-
-  subtitle: {
-    fontSize: 14,
-    marginTop: 6,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 25,
   },
 
-  profileCard: {
-    borderRadius: 18,
-    padding: 25,
-    alignItems: 'center',
-    marginBottom: 30,
-    borderWidth: 1,
+  eyebrow: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    marginBottom: 7,
   },
 
-  avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-
-  avatarText: {
-    color: '#FFFFFF',
+  heading: {
     fontSize: 30,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: -0.7,
   },
 
-  name: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-
-  email: {
+  subtitle: {
     fontSize: 13,
     marginTop: 6,
   },
 
-  accountBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+  headerIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  profileCard: {
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    marginBottom: 30,
+  },
+
+  profileTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  avatar: {
+    width: 65,
+    height: 65,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontWeight: '800',
+  },
+
+  profileInfo: {
+    flex: 1,
+    marginLeft: 15,
+  },
+
+  name: {
+    fontSize: 19,
+    fontWeight: '800',
+  },
+
+  email: {
+    fontSize: 12,
+    marginTop: 5,
+  },
+
+  verifiedIcon: {
+    width: 29,
+    height: 29,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  profileDivider: {
+    height: 1,
+    marginVertical: 19,
+  },
+
+  accountFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  accountStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+
+  accountStatusText: {
     fontSize: 11,
-    marginTop: 14,
-    overflow: 'hidden',
+    fontWeight: '500',
+  },
+
+  accountType: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1.3,
+  },
+
+  sectionHeader: {
+    marginBottom: 12,
   },
 
   sectionTitle: {
     fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 12,
+    fontWeight: '800',
   },
 
   menuCard: {
-    borderRadius: 15,
+    borderRadius: 18,
     paddingHorizontal: 15,
-    marginBottom: 25,
+    borderWidth: 1,
+    marginBottom: 27,
   },
 
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 17,
+    paddingVertical: 15,
     borderBottomWidth: 1,
   },
 
-  menuIcon: {
-    fontSize: 19,
+  menuIconContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 13,
   },
 
-  menuTitle: {
-    fontSize: 14,
+  menuIcon: {
+    fontSize: 18,
+  },
+
+  menuInfo: {
     flex: 1,
   },
 
-  arrow: {
-    fontSize: 24,
-  },
-
-  themeValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginRight: 10,
-  },
-
-  logoutButton: {
-    padding: 16,
-    borderRadius: 13,
-    alignItems: 'center',
-    marginTop: 5,
-  },
-
-  logoutText: {
-    fontSize: 15,
+  menuTitle: {
+    fontSize: 13,
     fontWeight: '700',
   },
 
-  version: {
-    textAlign: 'center',
+  menuSubtitle: {
     fontSize: 11,
-    marginVertical: 25,
+    marginTop: 4,
+  },
+
+  valueBadge: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 9,
+    marginRight: 8,
+  },
+
+  valueText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  arrow: {
+    fontSize: 23,
+    fontWeight: '300',
+  },
+
+  appCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderRadius: 17,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+
+  appLogo: {
+    width: 47,
+    height: 47,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 13,
+  },
+
+  appName: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  appDescription: {
+    fontSize: 11,
+    marginTop: 4,
+  },
+
+  versionBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 15,
+  },
+
+  logoutIcon: {
+    fontSize: 19,
+    marginRight: 9,
+    color: '#DC2626',
+  },
+
+  logoutText: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  footer: {
+    textAlign: 'center',
+    fontSize: 10,
+    marginTop: 23,
   },
 });

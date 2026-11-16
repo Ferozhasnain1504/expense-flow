@@ -1,5 +1,6 @@
 
 import React from 'react';
+
 import {
   View,
   Text,
@@ -7,64 +8,58 @@ import {
   Pressable,
   StyleSheet,
   StatusBar,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
-
-import {
-  requestNotificationPermissions,
-  scheduleBillReminder,
-} from '../services/notificationService';
 
 import { useExpenses } from '../context/ExpenseContext';
 import { useTheme } from '../context/ThemeContext';
 import TransactionItem from '../components/TransactionItem';
 
 export default function DashboardScreen({ navigation }) {
-  const { transactions, totalExpenses } = useExpenses();
+  const {
+    transactions = [],
+    totalExpenses = 0,
+    loading,
+  } = useExpenses();
+
   const { theme } = useTheme();
   const colors = theme.colors;
+  const isDark = theme.mode === 'dark';
 
-  const handleTestNotification = async () => {
-  try {
-    const permissionGranted =
-      await requestNotificationPermissions();
+  const styles = createStyles(colors, isDark);
 
-    if (!permissionGranted) {
-      Alert.alert(
-        'Permission Required',
-        'Please allow notifications in Android settings.'
-      );
-      return;
-    }
+  const safeTotal = Number(totalExpenses) || 0;
 
-    await scheduleBillReminder({
-      title: 'ExpenseFlow Test',
-      body: 'Your notifications are working successfully!',
-      date: new Date(Date.now() + 5000),
-      data: { type: 'test' },
+  const averageExpense =
+    transactions.length > 0
+      ? safeTotal / transactions.length
+      : 0;
+
+  const greeting = () => {
+    const hour = new Date().getHours();
+
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const formattedDate = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  const formatCurrency = (amount) => {
+    return Number(amount || 0).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
-
-    Alert.alert(
-      'Success',
-      'Notification scheduled! Check your phone in 5 seconds.'
-    );
-  } catch (error) {
-    console.error('Notification error:', error);
-    Alert.alert('Error', error.message);
-  }
-};
+  };
 
   return (
-    <View
-      style={[
-        styles.screen,
-        { backgroundColor: colors.background },
-      ]}
-    >
+    <View style={styles.screen}>
       <StatusBar
-        barStyle={
-          theme.mode === 'dark' ? 'light-content' : 'dark-content'
-        }
+        barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
 
@@ -72,35 +67,19 @@ export default function DashboardScreen({ navigation }) {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-
-      <Pressable
-  onPress={handleTestNotification}
-  style={{
-    backgroundColor: colors.primary,
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 20,
-    alignItems: 'center',
-  }}
->
-  <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
-    🔔 Test Local Notification
-  </Text>
-</Pressable>
         {/* HEADER */}
 
         <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { color: colors.text }]}>
-              Good morning 👋
+          <View style={styles.headerText}>
+            <Text style={styles.dateText}>
+              {formattedDate.toUpperCase()}
             </Text>
 
-            <Text
-              style={[
-                styles.subtitle,
-                { color: colors.secondaryText },
-              ]}
-            >
+            <Text style={styles.greeting}>
+              {greeting()} 👋
+            </Text>
+
+            <Text style={styles.subtitle}>
               Here's your spending overview.
             </Text>
           </View>
@@ -112,194 +91,202 @@ export default function DashboardScreen({ navigation }) {
 
         {/* TOTAL EXPENSE CARD */}
 
-        <View
-          style={[
-            styles.balanceCard,
-            { backgroundColor: colors.primary },
-          ]}
-        >
-          <Text style={styles.cardLabel}>TOTAL EXPENSES</Text>
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceTopRow}>
+            <View>
+              <Text style={styles.cardLabel}>
+                TOTAL EXPENSES
+              </Text>
 
-          <Text style={styles.total}>
-            ₹
-            {totalExpenses.toLocaleString('en-IN', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </Text>
+              <Text style={styles.total}>
+                ₹{formatCurrency(safeTotal)}
+              </Text>
 
-          <Text style={styles.cardSubtitle}>
-            Your total recorded spending
-          </Text>
+              <Text style={styles.cardSubtitle}>
+                Your total recorded spending
+              </Text>
+            </View>
+
+            <View style={styles.balanceIcon}>
+              <Text style={styles.balanceIconText}>₹</Text>
+            </View>
+          </View>
+
+          <View style={styles.cardDivider} />
 
           <View style={styles.cardFooter}>
-            <Text style={styles.footerLabel}>
-              {transactions.length} transactions
-            </Text>
+            <View>
+              <Text style={styles.footerLabel}>
+                TRANSACTIONS
+              </Text>
 
-            <Text style={styles.footerIcon}>↗</Text>
+              <Text style={styles.footerValue}>
+                {transactions.length} records
+              </Text>
+            </View>
+
+            <View style={styles.footerBadge}>
+              <Text style={styles.footerBadgeText}>
+                ExpenseFlow
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* QUICK SUMMARY */}
 
+        <View style={styles.sectionHeading}>
+          <Text style={styles.sectionTitle}>
+            Your overview
+          </Text>
+
+          <Text style={styles.sectionSubtitle}>
+            A quick look at your expenses
+          </Text>
+        </View>
+
         <View style={styles.summaryContainer}>
-          <View
-            style={[
-              styles.summaryCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={styles.summaryIconGreen}>
-              <Text style={styles.iconText}>↗</Text>
+          {/* TOTAL RECORDS */}
+
+          <View style={styles.summaryCard}>
+            <View style={styles.recordsIcon}>
+              <Text style={styles.summaryIconText}>↗</Text>
             </View>
 
-            <Text
-              style={[
-                styles.summaryLabel,
-                { color: colors.secondaryText },
-              ]}
-            >
+            <Text style={styles.summaryLabel}>
               Total Records
             </Text>
 
-            <Text
-              style={[
-                styles.summaryValue,
-                { color: colors.text },
-              ]}
-            >
+            <Text style={styles.summaryValue}>
               {transactions.length}
+            </Text>
+
+            <Text style={styles.summaryHint}>
+              Expenses tracked
             </Text>
           </View>
 
-          <View
-            style={[
-              styles.summaryCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <View style={styles.summaryIconPurple}>
-              <Text style={styles.iconText}>₹</Text>
+          {/* AVERAGE EXPENSE */}
+
+          <View style={styles.summaryCard}>
+            <View style={styles.averageIcon}>
+              <Text style={styles.summaryIconText}>₹</Text>
             </View>
 
-            <Text
-              style={[
-                styles.summaryLabel,
-                { color: colors.secondaryText },
-              ]}
-            >
+            <Text style={styles.summaryLabel}>
               Average Expense
             </Text>
 
-            <Text
-              style={[
-                styles.summaryValue,
-                { color: colors.text },
-              ]}
-            >
-              ₹
-              {transactions.length > 0
-                ? Math.round(
-                    totalExpenses / transactions.length
-                  ).toLocaleString('en-IN')
-                : '0'}
+            <Text style={styles.summaryValue}>
+              ₹{Math.round(averageExpense).toLocaleString('en-IN')}
+            </Text>
+
+            <Text style={styles.summaryHint}>
+              Per transaction
             </Text>
           </View>
         </View>
 
-        {/* TRANSACTION SECTION */}
+        {/* RECENT TRANSACTIONS */}
 
         <View style={styles.sectionHeader}>
           <View>
-            <Text
-              style={[
-                styles.sectionTitle,
-                { color: colors.text },
-              ]}
-            >
-              Recent Transactions
+            <Text style={styles.sectionTitle}>
+              Recent transactions
             </Text>
 
-            <Text
-              style={[
-                styles.sectionSubtitle,
-                { color: colors.secondaryText },
-              ]}
-            >
+            <Text style={styles.sectionSubtitle}>
               Keep track of your spending
             </Text>
           </View>
 
           <Pressable
             onPress={() => navigation.navigate('Transactions')}
+            hitSlop={10}
           >
-            <Text style={styles.seeAll}>See all →</Text>
+            <Text style={styles.seeAll}>
+              See all →
+            </Text>
           </Pressable>
         </View>
 
-        {/* TRANSACTION LIST */}
+        {/* LOADING STATE */}
 
-        {transactions.length === 0 ? (
-          <View
-            style={[
-              styles.emptyState,
-              { backgroundColor: colors.card },
-            ]}
-          >
-            <Text style={styles.emptyEmoji}>💸</Text>
+        {loading && transactions.length === 0 ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+            />
 
-            <Text
-              style={[
-                styles.emptyTitle,
-                { color: colors.text },
-              ]}
-            >
+            <Text style={styles.emptySubtitle}>
+              Loading your transactions...
+            </Text>
+          </View>
+        ) : transactions.length === 0 ? (
+
+          /* EMPTY STATE */
+
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Text style={styles.emptyEmoji}>💸</Text>
+            </View>
+
+            <Text style={styles.emptyTitle}>
               No expenses yet
             </Text>
 
-            <Text
-              style={[
-                styles.emptySubtitle,
-                { color: colors.secondaryText },
-              ]}
-            >
-              Start tracking your spending today.
+            <Text style={styles.emptySubtitle}>
+              Start tracking your spending and take control
+              of your finances.
             </Text>
+
+            <Pressable
+              style={styles.emptyButton}
+              onPress={() => navigation.navigate('AddExpense')}
+            >
+              <Text style={styles.emptyButtonText}>
+                Add your first expense
+              </Text>
+            </Pressable>
           </View>
+
         ) : (
-          transactions.slice(0, 5).map((item) => (
-            <TransactionItem key={item.id} item={item} />
-          ))
+
+          /* TRANSACTION LIST */
+
+          <View style={styles.transactionList}>
+            {transactions.slice(0, 5).map((item) => (
+              <TransactionItem
+                key={item.id}
+                item={item}
+              />
+            ))}
+          </View>
         )}
 
         {/* ADD EXPENSE BUTTON */}
 
         <Pressable
-          style={styles.addButton}
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && styles.buttonPressed,
+          ]}
           onPress={() => navigation.navigate('AddExpense')}
         >
+          <Text style={styles.addButtonIcon}>＋</Text>
+
           <Text style={styles.addButtonText}>
-            + Add Expense
+            Add Expense
           </Text>
         </Pressable>
 
         {/* FOOTER */}
 
-        <Text
-          style={[
-            styles.footer,
-            { color: colors.secondaryText },
-          ]}
-        >
-          Manage your money smarter.
+        <Text style={styles.footer}>
+          Manage your money smarter. ✨
         </Text>
+
       </ScrollView>
     </View>
   );
@@ -307,234 +294,359 @@ export default function DashboardScreen({ navigation }) {
 
 // STYLES
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#0B1020',
-  },
+const createStyles = (colors, isDark) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  container: {
-    paddingHorizontal: 22,
-    paddingTop: 55,
-    paddingBottom: 35,
-  },
+    container: {
+      paddingHorizontal: 20,
+      paddingTop: 55,
+      paddingBottom: 35,
+    },
 
-  // HEADER
+    // HEADER
 
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 28,
-  },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 28,
+    },
 
-  greeting: {
-    color: '#FFFFFF',
-    fontSize: 25,
-    fontWeight: '800',
-  },
+    headerText: {
+      flex: 1,
+    },
 
-  subtitle: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginTop: 7,
-  },
+    dateText: {
+      color: colors.secondaryText,
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1.2,
+      marginBottom: 9,
+    },
 
-  profile: {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
-    backgroundColor: '#5141B8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+    greeting: {
+      color: colors.text,
+      fontSize: 25,
+      fontWeight: '800',
+    },
 
-  profileText: {
-    color: '#FFFFFF',
-    fontSize: 19,
-    fontWeight: '800',
-  },
+    subtitle: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      marginTop: 7,
+    },
 
-  // BALANCE CARD
+    profile: {
+      width: 48,
+      height: 48,
+      borderRadius: 17,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 12,
+    },
 
-  balanceCard: {
-    backgroundColor: '#5141B8',
-    padding: 25,
-    borderRadius: 24,
-    marginBottom: 20,
-  },
+    profileText: {
+      color: '#FFFFFF',
+      fontSize: 20,
+      fontWeight: '800',
+    },
 
-  cardLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-  },
+    // TOTAL EXPENSE CARD
 
-  total: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '800',
-    marginTop: 15,
-  },
+    balanceCard: {
+      backgroundColor: colors.primary,
+      padding: 23,
+      borderRadius: 25,
+      marginBottom: 29,
+      elevation: 5,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 5 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+    },
 
-  cardSubtitle: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    marginTop: 8,
-  },
+    balanceTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
 
-  cardFooter: {
-    borderTopWidth: 1,
-    borderTopColor: '#FFFFFF30',
-    marginTop: 22,
-    paddingTop: 15,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+    cardLabel: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 1.5,
+    },
 
-  footerLabel: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-  },
+    total: {
+      color: '#FFFFFF',
+      fontSize: 30,
+      fontWeight: '800',
+      marginTop: 15,
+    },
 
-  footerIcon: {
-    color: '#FFFFFF',
-    fontSize: 20,
-  },
+    cardSubtitle: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      opacity: 0.85,
+      marginTop: 8,
+    },
 
-  // SUMMARY CARDS
+    balanceIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 17,
+      backgroundColor: '#FFFFFF25',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  summaryContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 30,
-  },
+    balanceIconText: {
+      color: '#FFFFFF',
+      fontSize: 25,
+      fontWeight: '800',
+    },
 
-  summaryCard: {
-    flex: 1,
-    backgroundColor: '#19243B',
-    padding: 17,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: '#27334C',
-  },
+    cardDivider: {
+      height: 1,
+      backgroundColor: '#FFFFFF45',
+      marginTop: 23,
+      marginBottom: 16,
+    },
 
-  summaryIconGreen: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#22C55E25',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 13,
-  },
+    cardFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
 
-  summaryIconPurple: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: '#8B5CF625',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 13,
-  },
+    footerLabel: {
+      color: '#FFFFFF',
+      fontSize: 9,
+      fontWeight: '700',
+      letterSpacing: 1,
+      opacity: 0.8,
+    },
 
-  iconText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-  },
+    footerValue: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '700',
+      marginTop: 5,
+    },
 
-  summaryLabel: {
-    color: '#94A3B8',
-    fontSize: 11,
-  },
+    footerBadge: {
+      backgroundColor: '#FFFFFF25',
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 20,
+    },
 
-  summaryValue: {
-    color: '#FFFFFF',
-    fontSize: 21,
-    fontWeight: '800',
-    marginTop: 8,
-  },
+    footerBadgeText: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '700',
+    },
 
-  // TRANSACTIONS
+    // SECTION HEADINGS
 
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 18,
-  },
+    sectionHeading: {
+      marginBottom: 16,
+    },
 
-  sectionTitle: {
-    color: '#FFFFFF',
-    fontSize: 19,
-    fontWeight: '800',
-  },
+    sectionTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '800',
+    },
 
-  sectionSubtitle: {
-    color: '#94A3B8',
-    fontSize: 11,
-    marginTop: 5,
-  },
+    sectionSubtitle: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      marginTop: 5,
+    },
 
-  seeAll: {
-    color: '#A78BFA',
-    fontSize: 12,
-    fontWeight: '700',
-  },
+    // SUMMARY CARDS
 
-  // EMPTY STATE
+    summaryContainer: {
+      flexDirection: 'row',
+      marginBottom: 30,
+    },
 
-  emptyState: {
-    backgroundColor: '#19243B',
-    padding: 30,
-    borderRadius: 20,
-    alignItems: 'center',
-    marginBottom: 15,
-  },
+    summaryCard: {
+      flex: 1,
+      backgroundColor: colors.card,
+      padding: 16,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginRight: 10,
+      minHeight: 155,
+    },
 
-  emptyEmoji: {
-    fontSize: 40,
-  },
+    recordsIcon: {
+      width: 37,
+      height: 37,
+      borderRadius: 13,
+      backgroundColor: isDark ? '#254337' : '#E4F7EB',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 13,
+    },
 
-  emptyTitle: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '800',
-    marginTop: 12,
-  },
+    averageIcon: {
+      width: 37,
+      height: 37,
+      borderRadius: 13,
+      backgroundColor: isDark ? '#382C56' : '#F0E9FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 13,
+    },
 
-  emptySubtitle: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginTop: 7,
-    textAlign: 'center',
-  },
+    summaryIconText: {
+      color: colors.primary,
+      fontSize: 18,
+      fontWeight: '800',
+    },
 
-  // ADD BUTTON
+    summaryLabel: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      fontWeight: '600',
+    },
 
-  addButton: {
-    backgroundColor: '#6D4AFF',
-    padding: 19,
-    borderRadius: 17,
-    alignItems: 'center',
-    marginTop: 18,
-  },
+    summaryValue: {
+      color: colors.text,
+      fontSize: 21,
+      fontWeight: '800',
+      marginTop: 8,
+    },
 
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
+    summaryHint: {
+      color: colors.secondaryText,
+      fontSize: 10,
+      marginTop: 5,
+    },
 
-  // FOOTER
+    // TRANSACTIONS
 
-  footer: {
-    textAlign: 'center',
-    fontSize: 11,
-    marginTop: 25,
-  },
-});
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 17,
+    },
+
+    seeAll: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
+    transactionList: {
+      marginBottom: 8,
+    },
+
+    // EMPTY STATE
+
+    emptyState: {
+      backgroundColor: colors.card,
+      padding: 25,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 15,
+    },
+
+    emptyIcon: {
+      width: 65,
+      height: 65,
+      borderRadius: 22,
+      backgroundColor: isDark ? '#382C56' : '#F0E9FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+
+    emptyEmoji: {
+      fontSize: 30,
+    },
+
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '800',
+      marginBottom: 8,
+    },
+
+    emptySubtitle: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      textAlign: 'center',
+      lineHeight: 19,
+      marginTop: 10,
+    },
+
+    emptyButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      marginTop: 18,
+    },
+
+    emptyButtonText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
+    // ADD EXPENSE BUTTON
+
+    addButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 17,
+      paddingVertical: 17,
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 17,
+      elevation: 3,
+    },
+
+    addButtonIcon: {
+      color: '#FFFFFF',
+      fontSize: 21,
+      fontWeight: '700',
+      marginRight: 8,
+    },
+
+    addButtonText: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '800',
+    },
+
+    buttonPressed: {
+      opacity: 0.8,
+      transform: [{ scale: 0.98 }],
+    },
+
+    // FOOTER
+
+    footer: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      textAlign: 'center',
+      marginTop: 25,
+      marginBottom: 5,
+    },
+  });

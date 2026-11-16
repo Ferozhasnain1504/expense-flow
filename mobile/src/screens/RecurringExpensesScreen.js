@@ -11,6 +11,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
 } from 'react-native';
 
 import { useFocusEffect } from '@react-navigation/native';
@@ -27,7 +28,6 @@ import {
   requestNotificationPermissions,
   scheduleRecurringExpenseReminder,
   cancelRecurringExpenseReminder,
-  getScheduledBillReminders,
 } from '../services/notificationService';
 
 const categories = [
@@ -41,9 +41,31 @@ const categories = [
 
 const frequencies = ['daily', 'weekly', 'monthly', 'yearly'];
 
+const categoryIcons = {
+  Food: '🍔',
+  Transport: '🚗',
+  Shopping: '🛍️',
+  Entertainment: '🎬',
+  Bills: '📄',
+  Other: '📌',
+};
+
+const formatCurrency = (value) =>
+  `₹${Number(value || 0).toLocaleString('en-IN', {
+    maximumFractionDigits: 0,
+  })}`;
+
+const formatDate = (date) =>
+  new Date(date).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
 export default function RecurringExpensesScreen() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const colors = theme.colors;
+  const styles = createStyles(colors);
 
   const [recurringExpenses, setRecurringExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +83,7 @@ export default function RecurringExpensesScreen() {
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
 
-  const loadRecurringExpenses = async () => {
+  const loadRecurringExpenses = useCallback(async () => {
     try {
       setLoading(true);
       const data = await fetchRecurringExpenses();
@@ -71,17 +93,16 @@ export default function RecurringExpensesScreen() {
         'Recurring expenses loading error:',
         error.response?.data || error.message
       );
-
       Alert.alert('Error', 'Could not load recurring expenses.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       loadRecurringExpenses();
-    }, [])
+    }, [loadRecurringExpenses])
   );
 
   const resetForm = () => {
@@ -129,13 +150,26 @@ export default function RecurringExpensesScreen() {
       return;
     }
 
+    if (
+      parsedStartDate.getFullYear() !== Number(startDate.slice(0, 4)) ||
+      parsedStartDate.getMonth() + 1 !== Number(startDate.slice(5, 7)) ||
+      parsedStartDate.getDate() !== Number(startDate.slice(8, 10))
+    ) {
+      Alert.alert('Invalid date', 'Enter a real calendar date.');
+      return;
+    }
+
     if (endDate) {
+      const validEndDate = /^\d{4}-\d{2}-\d{2}$/.test(endDate);
       const parsedEndDate = new Date(`${endDate}T00:00:00`);
 
       if (
-        !/^\d{4}-\d{2}-\d{2}$/.test(endDate) ||
+        !validEndDate ||
         Number.isNaN(parsedEndDate.getTime()) ||
-        parsedEndDate < parsedStartDate
+        parsedEndDate < parsedStartDate ||
+        parsedEndDate.getFullYear() !== Number(endDate.slice(0, 4)) ||
+        parsedEndDate.getMonth() + 1 !== Number(endDate.slice(5, 7)) ||
+        parsedEndDate.getDate() !== Number(endDate.slice(8, 10))
       ) {
         Alert.alert(
           'Invalid end date',
@@ -162,28 +196,24 @@ export default function RecurringExpensesScreen() {
 
       let savedExpense;
 
-if (editingId) {
-  savedExpense = await updateRecurringExpense(editingId, payload);
-} else {
-  savedExpense = await createRecurringExpense(payload);
-}
+      if (editingId) {
+        savedExpense = await updateRecurringExpense(editingId, payload);
+      } else {
+        savedExpense = await createRecurringExpense(payload);
+      }
 
-// Schedule reminder for newly created active expenses.
-// Schedule or update reminders for active recurring expenses.
-if (savedExpense?.isActive !== false) {
-  const permissionGranted =
-    await requestNotificationPermissions();
+      if (savedExpense?.isActive !== false) {
+        const permissionGranted = await requestNotificationPermissions();
 
-  if (permissionGranted) {
-    const notificationId =
-      await scheduleRecurringExpenseReminder(savedExpense);
+        if (permissionGranted) {
+          const notificationId =
+            await scheduleRecurringExpenseReminder(savedExpense);
 
-    console.log('Recurring reminder ID:', notificationId);
-  }
-} else if (savedExpense?._id) {
-  // Keep paused expenses without scheduled reminders.
-  await cancelRecurringExpenseReminder(savedExpense._id);
-}
+          console.log('Recurring reminder ID:', notificationId);
+        }
+      } else if (savedExpense?._id) {
+        await cancelRecurringExpenseReminder(savedExpense._id);
+      }
 
       await loadRecurringExpenses();
       resetForm();
@@ -210,41 +240,28 @@ if (savedExpense?.isActive !== false) {
     }
   };
 
-  const formatCurrency = (value) =>
-    `₹${Number(value).toLocaleString('en-IN')}`;
-
-  const formatDate = (date) =>
-    new Date(date).toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-
   const handleToggleActive = async (item) => {
-  try {
-    const updatedExpense = await updateRecurringExpense(item._id, {
-      isActive: !item.isActive,
-    });
+    try {
+      const updatedExpense = await updateRecurringExpense(item._id, {
+        isActive: !item.isActive,
+      });
 
-    if (item.isActive) {
-      // Expense was active, so cancel its reminder.
-      await cancelRecurringExpenseReminder(item._id);
-    } else {
-      // Expense was paused, so schedule a reminder when resumed.
-      const permissionGranted =
-        await requestNotificationPermissions();
+      if (item.isActive) {
+        await cancelRecurringExpenseReminder(item._id);
+      } else {
+        const permissionGranted = await requestNotificationPermissions();
 
-      if (permissionGranted) {
-        await scheduleRecurringExpenseReminder(updatedExpense);
+        if (permissionGranted) {
+          await scheduleRecurringExpenseReminder(updatedExpense);
+        }
       }
-    }
 
-    await loadRecurringExpenses();
-  } catch (error) {
-    console.error('Toggle recurring expense error:', error);
-    Alert.alert('Error', 'Could not update recurring expense.');
-  }
-};
+      await loadRecurringExpenses();
+    } catch (error) {
+      console.error('Toggle recurring expense error:', error);
+      Alert.alert('Error', 'Could not update recurring expense.');
+    }
+  };
 
   const handleDelete = (item) => {
     Alert.alert(
@@ -258,10 +275,7 @@ if (savedExpense?.isActive !== false) {
           onPress: async () => {
             try {
               await deleteRecurringExpense(item._id);
-
-              // Cancel the scheduled notification for this expense.
               await cancelRecurringExpenseReminder(item._id);
-
               await loadRecurringExpenses();
             } catch (error) {
               Alert.alert('Error', 'Could not delete recurring expense.');
@@ -272,63 +286,248 @@ if (savedExpense?.isActive !== false) {
     );
   };
 
-  const totalMonthlyCommitment = recurringExpenses
-    .filter((item) => item.isActive)
-    .reduce((total, item) => {
-      const value = Number(item.amount);
+  const activeExpenses = recurringExpenses.filter(
+    (item) => item.isActive
+  );
 
-      const monthlyValue = {
-        daily: value * 30,
-        weekly: value * (52 / 12),
-        monthly: value,
-        yearly: value / 12,
-      }[item.frequency];
+  const pausedExpenses = recurringExpenses.filter(
+    (item) => !item.isActive
+  );
 
-      return total + monthlyValue;
-    }, 0);
+  const totalMonthlyCommitment = activeExpenses.reduce((total, item) => {
+    const value = Number(item.amount);
 
-      const checkScheduledReminders = async () => {
-    const reminders = await getScheduledBillReminders();
+    const monthlyValue = {
+      daily: value * 30,
+      weekly: value * (52 / 12),
+      monthly: value,
+      yearly: value / 12,
+    }[item.frequency];
 
-    console.log(
-      'Scheduled notifications:',
-      JSON.stringify(reminders, null, 2)
-    );
-  };
+    return total + monthlyValue;
+  }, 0);
+
+  const renderInput = (
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    options = {}
+  ) => (
+    <>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        style={[
+          styles.input,
+          options.multiline && styles.notesInput,
+        ]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.secondaryText}
+        keyboardType={options.keyboardType || 'default'}
+        multiline={options.multiline || false}
+        autoCapitalize={options.autoCapitalize || 'sentences'}
+        maxLength={options.maxLength}
+      />
+    </>
+  );
+
+  const renderExpenseCard = (item) => (
+    <View
+      key={item._id}
+      style={[
+        styles.expenseCard,
+        !item.isActive && styles.pausedCard,
+      ]}
+    >
+      <View style={styles.cardTop}>
+        <View style={styles.cardTitleRow}>
+          <View style={styles.categoryIcon}>
+            <Text style={styles.categoryIconText}>
+              {categoryIcons[item.category] || '📌'}
+            </Text>
+          </View>
+
+          <View style={styles.titleContainer}>
+            <Text style={styles.expenseTitle} numberOfLines={1}>
+              {item.title}
+            </Text>
+            <Text style={styles.categoryText}>
+              {item.category}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.amountContainer}>
+          <Text style={styles.amount}>
+            {formatCurrency(item.amount)}
+          </Text>
+          <Text style={styles.amountCaption}>per cycle</Text>
+        </View>
+      </View>
+
+      <View style={styles.cardDivider} />
+
+      <View style={styles.cardDetails}>
+        <View style={styles.frequencyBadge}>
+          <Text style={styles.frequencyText}>
+            {item.frequency.toUpperCase()}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor: item.isActive
+                ? '#10B98118'
+                : colors.surface,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.statusDot,
+              {
+                backgroundColor: item.isActive
+                  ? '#10B981'
+                  : colors.secondaryText,
+              },
+            ]}
+          />
+          <Text
+            style={[
+              styles.statusText,
+              {
+                color: item.isActive
+                  ? '#10B981'
+                  : colors.secondaryText,
+              },
+            ]}
+          >
+            {item.isActive ? 'Active' : 'Paused'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.dueDateContainer}>
+        <Text style={styles.dueDateLabel}>NEXT PAYMENT</Text>
+        <Text style={styles.dueDate}>
+          {formatDate(item.nextDueDate)}
+        </Text>
+      </View>
+
+      {item.notes ? (
+        <Text style={styles.notesText} numberOfLines={2}>
+          {item.notes}
+        </Text>
+      ) : null}
+
+      <View style={styles.actions}>
+        <Pressable
+          onPress={() => handleEdit(item)}
+          style={styles.actionButton}
+        >
+          <Text style={styles.editActionText}>Edit</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => handleToggleActive(item)}
+          style={styles.actionButton}
+        >
+          <Text style={styles.editActionText}>
+            {item.isActive ? 'Pause' : 'Resume'}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => handleDelete(item)}
+          style={[styles.actionButton, styles.deleteActionButton]}
+        >
+          <Text style={styles.deleteActionText}>Delete</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
 
   return (
     <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: colors.background }]}
+      style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
+
       <ScrollView
-        style={styles.screen}
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.heading, { color: colors.text }]}>
-          Recurring Expenses
-        </Text>
-
-        <Text style={[styles.subtitle, { color: colors.secondaryText }]}>
-          Manage subscriptions and regular payments
-        </Text>
-
-        <View style={[styles.summaryCard, { backgroundColor: colors.primary }]}>
-          <Text style={styles.summaryLabel}>
-            Estimated monthly commitment
-          </Text>
-          <Text style={styles.summaryAmount}>
-            {formatCurrency(totalMonthlyCommitment)}
-          </Text>
-          <Text style={styles.summaryCaption}>
-            Across active recurring expenses
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>AUTOMATE YOUR FINANCES</Text>
+          <Text style={styles.heading}>Recurring expenses</Text>
+          <Text style={styles.subtitle}>
+            Keep track of subscriptions and regular payments.
           </Text>
         </View>
 
+        {/* MONTHLY COMMITMENT */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryTop}>
+            <View style={styles.summaryIcon}>
+              <Text style={styles.summaryIconText}>↻</Text>
+            </View>
+            <Text style={styles.summaryTag}>MONTHLY ESTIMATE</Text>
+          </View>
+
+          <Text style={styles.summaryAmount}>
+            {formatCurrency(totalMonthlyCommitment)}
+          </Text>
+
+          <Text style={styles.summaryCaption}>
+            Estimated commitment from active recurring expenses
+          </Text>
+
+          <View style={styles.summaryDivider} />
+
+          <View style={styles.summaryStats}>
+            <View>
+              <Text style={styles.summaryStatValue}>
+                {activeExpenses.length}
+              </Text>
+              <Text style={styles.summaryStatLabel}>Active</Text>
+            </View>
+
+            <View style={styles.summaryStatDivider} />
+
+            <View>
+              <Text style={styles.summaryStatValue}>
+                {pausedExpenses.length}
+              </Text>
+              <Text style={styles.summaryStatLabel}>Paused</Text>
+            </View>
+
+            <View style={styles.summaryStatDivider} />
+
+            <View>
+              <Text style={styles.summaryStatValue}>
+                {recurringExpenses.length}
+              </Text>
+              <Text style={styles.summaryStatLabel}>Total</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ADD BUTTON */}
         <Pressable
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && styles.buttonPressed,
+          ]}
           onPress={() => {
             if (showForm) {
               resetForm();
@@ -338,62 +537,40 @@ if (savedExpense?.isActive !== false) {
           }}
         >
           <Text style={styles.addButtonText}>
-            {showForm ? 'Close Form' : '+ Add Recurring Expense'}
+            {showForm ? '×  Close form' : '+  Add recurring expense'}
           </Text>
         </Pressable>
 
+        {/* CREATE / EDIT FORM */}
         {showForm && (
-          <View
-            style={[
-              styles.formCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <Text style={[styles.formTitle, { color: colors.text }]}>
-              {editingId ? 'Edit Recurring Expense' : 'New Recurring Expense'}
-            </Text>
+          <View style={styles.formCard}>
+            <View style={styles.formHeader}>
+              <Text style={styles.eyebrow}>EXPENSE DETAILS</Text>
+              <Text style={styles.formTitle}>
+                {editingId ? 'Edit recurring expense' : 'New recurring expense'}
+              </Text>
+              <Text style={styles.formDescription}>
+                Enter the details of your regular payment.
+              </Text>
+            </View>
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Expense Title *
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              placeholder="e.g. Netflix Subscription"
-              placeholderTextColor={colors.secondaryText}
-              value={title}
-              onChangeText={setTitle}
-              maxLength={60}
-            />
+            {renderInput(
+              'Expense title *',
+              title,
+              setTitle,
+              'e.g. Netflix Subscription',
+              { maxLength: 60 }
+            )}
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Amount (₹) *
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              placeholder="Enter amount"
-              placeholderTextColor={colors.secondaryText}
-              keyboardType="decimal-pad"
-              value={amount}
-              onChangeText={setAmount}
-            />
+            {renderInput(
+              'Amount (₹) *',
+              amount,
+              setAmount,
+              'Enter amount',
+              { keyboardType: 'decimal-pad' }
+            )}
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Category *
-            </Text>
+            <Text style={styles.label}>Category *</Text>
             <View style={styles.options}>
               {categories.map((item) => {
                 const selected = category === item;
@@ -404,21 +581,17 @@ if (savedExpense?.isActive !== false) {
                     onPress={() => setCategory(item)}
                     style={[
                       styles.option,
-                      {
-                        backgroundColor: selected
-                          ? colors.primary
-                          : colors.background,
-                        borderColor: selected
-                          ? colors.primary
-                          : colors.border,
-                      },
+                      selected && styles.selectedOption,
                     ]}
                   >
+                    <Text style={styles.optionEmoji}>
+                      {categoryIcons[item]}
+                    </Text>
                     <Text
-                      style={{
-                        color: selected ? '#FFFFFF' : colors.text,
-                        fontWeight: '600',
-                      }}
+                      style={[
+                        styles.optionText,
+                        selected && styles.selectedOptionText,
+                      ]}
                     >
                       {item}
                     </Text>
@@ -427,10 +600,8 @@ if (savedExpense?.isActive !== false) {
               })}
             </View>
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Frequency *
-            </Text>
-            <View style={styles.options}>
+            <Text style={styles.label}>Payment frequency *</Text>
+            <View style={styles.frequencyOptions}>
               {frequencies.map((item) => {
                 const selected = frequency === item;
 
@@ -439,96 +610,52 @@ if (savedExpense?.isActive !== false) {
                     key={item}
                     onPress={() => setFrequency(item)}
                     style={[
-                      styles.option,
-                      {
-                        backgroundColor: selected
-                          ? colors.primary
-                          : colors.background,
-                        borderColor: selected
-                          ? colors.primary
-                          : colors.border,
-                      },
+                      styles.frequencyOption,
+                      selected && styles.selectedFrequencyOption,
                     ]}
                   >
                     <Text
-                      style={{
-                        color: selected ? '#FFFFFF' : colors.text,
-                        fontWeight: '600',
-                        textTransform: 'capitalize',
-                      }}
+                      style={[
+                        styles.frequencyOptionText,
+                        selected && styles.selectedOptionText,
+                      ]}
                     >
-                      {item}
+                      {item.charAt(0).toUpperCase() + item.slice(1)}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Start Date * (YYYY-MM-DD)
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              placeholder="2026-11-14"
-              placeholderTextColor={colors.secondaryText}
-              value={startDate}
-              onChangeText={setStartDate}
-              autoCapitalize="none"
-            />
+            {renderInput(
+              'Start date * (YYYY-MM-DD)',
+              startDate,
+              setStartDate,
+              '2026-11-16',
+              { autoCapitalize: 'none' }
+            )}
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              End Date (Optional, YYYY-MM-DD)
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              placeholder="Leave empty for no end date"
-              placeholderTextColor={colors.secondaryText}
-              value={endDate}
-              onChangeText={setEndDate}
-              autoCapitalize="none"
-            />
+            {renderInput(
+              'End date (optional)',
+              endDate,
+              setEndDate,
+              'Leave empty for no end date',
+              { autoCapitalize: 'none' }
+            )}
 
-            <Text style={[styles.label, { color: colors.text }]}>
-              Notes (Optional)
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                styles.notesInput,
-                {
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                  borderColor: colors.border,
-                },
-              ]}
-              placeholder="Add a note"
-              placeholderTextColor={colors.secondaryText}
-              value={notes}
-              onChangeText={setNotes}
-              multiline
-            />
+            {renderInput(
+              'Notes (optional)',
+              notes,
+              setNotes,
+              'Add a note about this payment',
+              { multiline: true, maxLength: 200 }
+            )}
 
             <Pressable
-              style={[
+              style={({ pressed }) => [
                 styles.saveButton,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: saving ? 0.7 : 1,
-                },
+                saving && styles.disabledButton,
+                pressed && !saving && styles.buttonPressed,
               ]}
               onPress={handleSubmit}
               disabled={saving}
@@ -537,297 +664,553 @@ if (savedExpense?.isActive !== false) {
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.saveText}>
-                  {editingId ? 'Update Recurring Expense' : 'Save Recurring Expense'}
+                  {editingId ? 'Update recurring expense' : 'Save recurring expense'}
                 </Text>
               )}
+            </Pressable>
+
+            <Pressable
+              onPress={resetForm}
+              style={styles.cancelButton}
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
             </Pressable>
           </View>
         )}
 
+        {/* RECURRING EXPENSE LIST */}
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Your subscriptions
-          </Text>
-          <Text style={[styles.count, { color: colors.secondaryText }]}>
-            {recurringExpenses.length} total
-          </Text>
+          <View>
+            <Text style={styles.eyebrow}>YOUR REGULAR PAYMENTS</Text>
+            <Text style={styles.sectionTitle}>Your subscriptions</Text>
+          </View>
+          <View style={styles.countBadge}>
+            <Text style={styles.countText}>
+              {recurringExpenses.length}
+            </Text>
+          </View>
         </View>
 
         {loading ? (
-          <ActivityIndicator
-            size="large"
-            color={colors.primary}
-            style={{ marginTop: 40 }}
-          />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.loadingText}>
+              Loading recurring expenses...
+            </Text>
+          </View>
         ) : recurringExpenses.length === 0 ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card }]}>
+          <View style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🔁</Text>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            <Text style={styles.emptyTitle}>
               No recurring expenses yet
             </Text>
-            <Text style={[styles.emptyText, { color: colors.secondaryText }]}>
-              Add your regular payments and subscriptions here.
+            <Text style={styles.emptyText}>
+              Add your subscriptions and regular payments to keep
+              track of what you pay repeatedly.
             </Text>
           </View>
         ) : (
-          recurringExpenses.map((item) => (
-            <View
-              key={item._id}
-              style={[
-                styles.expenseCard,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <View style={styles.cardTop}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.expenseTitle, { color: colors.text }]}>
-                    {item.title}
+          <>
+            {activeExpenses.length > 0 && (
+              <>
+                <View style={styles.listSectionHeading}>
+                  <Text style={styles.listSectionTitle}>
+                    Active payments
                   </Text>
-                  <Text style={[styles.categoryText, { color: colors.secondaryText }]}>
-                    {item.category}
+                  <Text style={styles.listSectionCount}>
+                    {activeExpenses.length}
                   </Text>
                 </View>
 
-                <Text style={[styles.amount, { color: colors.primary }]}>
-                  {formatCurrency(item.amount)}
-                </Text>
-              </View>
+                {activeExpenses.map(renderExpenseCard)}
+              </>
+            )}
 
-              <View
-                style={[
-                  styles.frequencyBadge,
-                  { backgroundColor: colors.surface },
-                ]}
-              >
-                <Text style={[styles.frequencyText, { color: colors.primary }]}>
-                  {item.frequency.toUpperCase()}
-                </Text>
-              </View>
-
-              <Text style={[styles.dueDate, { color: colors.secondaryText }]}>
-                Next payment: {formatDate(item.nextDueDate)}
-              </Text>
-
-              <View style={styles.actions}>
-                <Pressable
-                  onPress={() => handleEdit(item)}
-                  style={[styles.actionButton, { backgroundColor: colors.surface }]}
-                >
-                  <Text style={[styles.actionText, { color: colors.primary }]}>
-                    Edit
+            {pausedExpenses.length > 0 && (
+              <>
+                <View style={styles.listSectionHeading}>
+                  <Text style={styles.listSectionTitle}>
+                    Paused payments
                   </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => handleToggleActive(item)}
-                  style={[styles.actionButton, { backgroundColor: colors.surface }]}
-                >
-                  <Text style={[styles.actionText, { color: colors.primary }]}>
-                    {item.isActive ? 'Pause' : 'Resume'}
+                  <Text style={styles.listSectionCount}>
+                    {pausedExpenses.length}
                   </Text>
-                </Pressable>
+                </View>
 
-                <Pressable
-                  onPress={() => handleDelete(item)}
-                  style={[styles.actionButton, { backgroundColor: colors.surface }]}
-                >
-                  <Text style={[styles.actionText, { color: colors.danger }]}>
-                    Delete
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          ))
+                {pausedExpenses.map(renderExpenseCard)}
+              </>
+            )}
+          </>
         )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  content: {
-    padding: 20,
-    paddingTop: 55,
-    paddingBottom: 45,
-  },
-  heading: {
-    fontSize: 27,
-    fontWeight: '700',
-  },
-  subtitle: {
-    fontSize: 13,
-    marginTop: 7,
-    marginBottom: 24,
-  },
-  summaryCard: {
-    borderRadius: 18,
-    padding: 22,
-    marginBottom: 18,
-  },
-  summaryLabel: {
-    color: '#FFFFFF',
-    fontSize: 13,
-  },
-  summaryAmount: {
-    color: '#FFFFFF',
-    fontSize: 30,
-    fontWeight: '700',
-    marginTop: 10,
-  },
-  summaryCaption: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    marginTop: 7,
-    opacity: 0.85,
-  },
-  addButton: {
-    padding: 17,
-    borderRadius: 13,
-    alignItems: 'center',
-    marginBottom: 25,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  formCard: {
-    borderRadius: 17,
-    borderWidth: 1,
-    padding: 18,
-    marginBottom: 28,
-  },
-  formTitle: {
-    fontSize: 19,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  label: {
-    fontWeight: '700',
-    marginTop: 18,
-    marginBottom: 9,
-  },
-  input: {
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 15,
-    borderWidth: 1,
-  },
-  notesInput: {
-    minHeight: 85,
-    textAlignVertical: 'top',
-  },
-  options: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 9,
-  },
-  option: {
-    borderWidth: 1,
-    borderRadius: 11,
-    paddingHorizontal: 13,
-    paddingVertical: 12,
-  },
-  saveButton: {
-    padding: 17,
-    borderRadius: 13,
-    alignItems: 'center',
-    marginTop: 25,
-  },
-  saveText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  count: {
-    fontSize: 12,
-  },
-  emptyCard: {
-    padding: 30,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  emptyIcon: {
-    fontSize: 38,
-    marginBottom: 15,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 19,
-  },
-  expenseCard: {
-    borderRadius: 16,
-    padding: 17,
-    marginBottom: 14,
-    borderWidth: 1,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  expenseTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  categoryText: {
-    fontSize: 12,
-    marginTop: 5,
-  },
-  amount: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  frequencyBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginTop: 15,
-  },
-  frequencyText: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  dueDate: {
-    fontSize: 12,
-    marginTop: 13,
-  },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 9,
-    marginTop: 16,
-  },
-  actionButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 9,
-  },
-  actionText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 45,
+    },
+    header: {
+      marginTop: 35,
+      marginBottom: 23,
+    },
+    eyebrow: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1.5,
+      marginBottom: 8,
+    },
+    heading: {
+      color: colors.text,
+      fontSize: 28,
+      fontWeight: '800',
+      letterSpacing: -0.7,
+    },
+    subtitle: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      marginTop: 7,
+      lineHeight: 19,
+    },
+    summaryCard: {
+      backgroundColor: colors.primary,
+      borderRadius: 23,
+      padding: 22,
+      marginBottom: 17,
+    },
+    summaryTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    summaryIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 13,
+      backgroundColor: '#FFFFFF25',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    summaryIconText: {
+      color: '#FFFFFF',
+      fontSize: 26,
+      fontWeight: '700',
+    },
+    summaryTag: {
+      color: '#FFFFFF',
+      opacity: 0.85,
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 1.2,
+    },
+    summaryAmount: {
+      color: '#FFFFFF',
+      fontSize: 32,
+      fontWeight: '800',
+      marginTop: 18,
+      letterSpacing: -0.5,
+    },
+    summaryCaption: {
+      color: '#FFFFFF',
+      opacity: 0.85,
+      fontSize: 11,
+      marginTop: 6,
+      lineHeight: 17,
+    },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: '#FFFFFF40',
+      marginVertical: 19,
+    },
+    summaryStats: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    summaryStatValue: {
+      color: '#FFFFFF',
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    summaryStatLabel: {
+      color: '#FFFFFF',
+      opacity: 0.8,
+      fontSize: 10,
+      marginTop: 4,
+    },
+    summaryStatDivider: {
+      width: 1,
+      height: 30,
+      backgroundColor: '#FFFFFF50',
+    },
+    addButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      padding: 16,
+      borderRadius: 15,
+      alignItems: 'center',
+      marginBottom: 25,
+    },
+    addButtonText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    buttonPressed: {
+      opacity: 0.75,
+      transform: [{ scale: 0.99 }],
+    },
+    formCard: {
+      backgroundColor: colors.card,
+      borderRadius: 21,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 18,
+      marginBottom: 28,
+    },
+    formHeader: {
+      marginBottom: 12,
+    },
+    formTitle: {
+      color: colors.text,
+      fontSize: 21,
+      fontWeight: '800',
+    },
+    formDescription: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      marginTop: 6,
+      lineHeight: 18,
+    },
+    label: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: '800',
+      marginTop: 18,
+      marginBottom: 9,
+    },
+    input: {
+      backgroundColor: colors.background,
+      color: colors.text,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 13,
+      paddingVertical: 13,
+      fontSize: 14,
+    },
+    notesInput: {
+      minHeight: 85,
+      textAlignVertical: 'top',
+    },
+    options: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    option: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+      borderRadius: 11,
+      paddingHorizontal: 11,
+      paddingVertical: 11,
+    },
+    selectedOption: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    optionEmoji: {
+      fontSize: 13,
+    },
+    optionText: {
+      color: colors.text,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    selectedOptionText: {
+      color: '#FFFFFF',
+    },
+    frequencyOptions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    frequencyOption: {
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+      borderRadius: 11,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.background,
+    },
+    selectedFrequencyOption: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    frequencyOptionText: {
+      color: colors.text,
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    saveButton: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 13,
+      alignItems: 'center',
+      marginTop: 24,
+      minHeight: 52,
+      justifyContent: 'center',
+    },
+    saveText: {
+      color: '#FFFFFF',
+      fontWeight: '800',
+      fontSize: 13,
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+    cancelButton: {
+      alignItems: 'center',
+      padding: 14,
+    },
+    cancelText: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 17,
+    },
+    sectionTitle: {
+      color: colors.text,
+      fontSize: 21,
+      fontWeight: '800',
+    },
+    countBadge: {
+      minWidth: 34,
+      height: 34,
+      borderRadius: 12,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 9,
+    },
+    countText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    listSectionHeading: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 7,
+      marginBottom: 12,
+      gap: 9,
+    },
+    listSectionTitle: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    listSectionCount: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    expenseCard: {
+      backgroundColor: colors.card,
+      borderRadius: 18,
+      padding: 16,
+      marginBottom: 13,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pausedCard: {
+      opacity: 0.75,
+    },
+    cardTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    cardTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      marginRight: 8,
+    },
+    categoryIcon: {
+      width: 43,
+      height: 43,
+      borderRadius: 14,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 11,
+    },
+    categoryIconText: {
+      fontSize: 19,
+    },
+    titleContainer: {
+      flex: 1,
+    },
+    expenseTitle: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    categoryText: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      marginTop: 5,
+    },
+    amountContainer: {
+      alignItems: 'flex-end',
+    },
+    amount: {
+      color: colors.primary,
+      fontSize: 17,
+      fontWeight: '800',
+    },
+    amountCaption: {
+      color: colors.secondaryText,
+      fontSize: 9,
+      marginTop: 3,
+    },
+    cardDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 15,
+    },
+    cardDetails: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    frequencyBadge: {
+      backgroundColor: colors.surface,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+    },
+    frequencyText: {
+      color: colors.primary,
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 0.7,
+    },
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      borderRadius: 8,
+    },
+    statusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 4,
+      marginRight: 6,
+    },
+    statusText: {
+      fontSize: 10,
+      fontWeight: '800',
+    },
+    dueDateContainer: {
+      marginTop: 16,
+    },
+    dueDateLabel: {
+      color: colors.secondaryText,
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 1,
+    },
+    dueDate: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '700',
+      marginTop: 5,
+    },
+    notesText: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      lineHeight: 17,
+      marginTop: 11,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: 8,
+      marginTop: 17,
+    },
+    actionButton: {
+      flex: 1,
+      backgroundColor: colors.surface,
+      paddingVertical: 11,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    editActionText: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    deleteActionButton: {
+      backgroundColor: `${colors.danger}15`,
+    },
+    deleteActionText: {
+      color: colors.danger,
+      fontSize: 11,
+      fontWeight: '800',
+    },
+    emptyCard: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 28,
+      alignItems: 'center',
+    },
+    emptyIcon: {
+      fontSize: 39,
+      marginBottom: 14,
+    },
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '800',
+    },
+    emptyText: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      lineHeight: 19,
+      textAlign: 'center',
+      marginTop: 9,
+    },
+    loadingContainer: {
+      paddingVertical: 45,
+      alignItems: 'center',
+    },
+    loadingText: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      marginTop: 12,
+    },
+  });

@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from 'react';
-
 import {
   View,
   Text,
@@ -10,16 +9,21 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
 import { useTheme } from '../context/ThemeContext';
 
-const formatCurrency = (amount) => {
-  return `₹${Number(amount || 0).toLocaleString('en-IN', {
+const formatCurrency = (amount) =>
+  `₹${Number(amount || 0).toLocaleString('en-IN', {
     maximumFractionDigits: 0,
   })}`;
-};
+
+const getMonthName = (date) =>
+  date.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
 export default function BudgetScreen() {
   const {
@@ -29,7 +33,7 @@ export default function BudgetScreen() {
     saveMonthlyBudget,
   } = useExpenses();
 
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const colors = theme.colors;
 
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -49,7 +53,6 @@ export default function BudgetScreen() {
     budget.month === month &&
     budget.year === year;
 
-  // FETCH SELECTED MONTH'S BUDGET
   useEffect(() => {
     let active = true;
 
@@ -61,10 +64,12 @@ export default function BudgetScreen() {
           setShowEditor(true);
         }
       } catch (error) {
-        Alert.alert(
-          'Error',
-          'Unable to load your monthly budget. Please try again.'
-        );
+        if (active) {
+          Alert.alert(
+            'Error',
+            'Unable to load your monthly budget. Please try again.'
+          );
+        }
       }
     };
 
@@ -75,7 +80,6 @@ export default function BudgetScreen() {
     };
   }, [month, year, refreshBudget]);
 
-  // LOAD EXISTING BUDGET INTO THE EDITOR
   useEffect(() => {
     if (hasCurrentBudget) {
       setTotalLimit(String(budget.totalLimit));
@@ -92,7 +96,6 @@ export default function BudgetScreen() {
     }
   }, [budget, month, year]);
 
-  // CHANGE MONTH
   const changeMonth = (direction) => {
     setSelectedDate(
       (previous) =>
@@ -102,11 +105,9 @@ export default function BudgetScreen() {
           1
         )
     );
-
     setShowEditor(false);
   };
 
-  // UPDATE CATEGORY ROW
   const updateCategoryRow = (index, field, value) => {
     setCategoryRows((previous) =>
       previous.map((item, i) =>
@@ -115,7 +116,6 @@ export default function BudgetScreen() {
     );
   };
 
-  // ADD CATEGORY ROW
   const addCategoryRow = () => {
     setCategoryRows((previous) => [
       ...previous,
@@ -123,14 +123,12 @@ export default function BudgetScreen() {
     ]);
   };
 
-  // REMOVE CATEGORY ROW
   const removeCategoryRow = (index) => {
     setCategoryRows((previous) =>
       previous.filter((_, i) => i !== index)
     );
   };
 
-  // SAVE MONTHLY BUDGET
   const handleSaveBudget = async () => {
     const parsedTotal = Number(totalLimit);
 
@@ -151,9 +149,7 @@ export default function BudgetScreen() {
     for (const item of categoryRows) {
       const category = item.category.trim();
 
-      if (!category) {
-        continue;
-      }
+      if (!category) continue;
 
       const limit = Number(item.limit);
 
@@ -222,766 +218,902 @@ export default function BudgetScreen() {
     ? budget.categorySummary || []
     : [];
 
+  const styles = createStyles(colors);
+
+  const renderSectionHeading = (eyebrow, heading, description) => (
+    <View style={styles.sectionHeading}>
+      <Text style={styles.eyebrow}>{eyebrow}</Text>
+      <Text style={styles.sectionTitle}>{heading}</Text>
+      {description ? (
+        <Text style={styles.sectionDescription}>{description}</Text>
+      ) : null}
+    </View>
+  );
+
   return (
-    <ScrollView
-      style={[
-        styles.container,
-        { backgroundColor: colors.background },
-      ]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={[styles.heading, { color: colors.text }]}>
-          Budgets
-        </Text>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
 
-        <Text
-          style={[
-            styles.subtitle,
-            { color: colors.secondaryText },
-          ]}
-        >
-          Take control of your spending
-        </Text>
-      </View>
-
-      {/* MONTH SELECTOR */}
-      <View style={styles.monthSelector}>
-        <Pressable
-          onPress={() => changeMonth(-1)}
-          style={[
-            styles.monthButton,
-            { backgroundColor: colors.card },
-          ]}
-        >
-          <Text style={[styles.arrow, { color: colors.text }]}>
-            ‹
-          </Text>
-        </Pressable>
-
-        <Text style={[styles.monthText, { color: colors.text }]}>
-          {selectedDate.toLocaleString('en-IN', {
-            month: 'long',
-            year: 'numeric',
-          })}
-        </Text>
-
-        <Pressable
-          onPress={() => changeMonth(1)}
-          style={[
-            styles.monthButton,
-            { backgroundColor: colors.card },
-          ]}
-        >
-          <Text style={[styles.arrow, { color: colors.text }]}>
-            ›
-          </Text>
-        </Pressable>
-      </View>
-
-      {budgetLoading && !hasCurrentBudget ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator
-            size="large"
-            color={colors.primary}
-          />
-          <Text
-            style={[
-              styles.loadingText,
-              { color: colors.secondaryText },
-            ]}
-          >
-            Loading budget...
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>YOUR FINANCES</Text>
+          <Text style={styles.heading}>Budgets</Text>
+          <Text style={styles.subtitle}>
+            Plan your spending. Stay in control.
           </Text>
         </View>
-      ) : (
-        <>
-          {/* BUDGET OVERVIEW */}
-          {hasCurrentBudget ? (
-            <>
-              <View
-                style={[
-                  styles.overviewCard,
-                  { backgroundColor: colors.card },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.cardLabel,
-                    { color: colors.secondaryText },
-                  ]}
-                >
-                  Monthly Budget
-                </Text>
 
-                <Text
-                  style={[styles.totalLimit, { color: colors.text }]}
-                >
-                  {formatCurrency(budget.totalLimit)}
-                </Text>
+        {/* MONTH SELECTOR */}
+        <View style={styles.monthSelector}>
+          <Pressable
+            onPress={() => changeMonth(-1)}
+            style={({ pressed }) => [
+              styles.monthButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.monthArrow}>‹</Text>
+          </Pressable>
 
-                <View style={styles.spendingRow}>
-                  <View>
-                    <Text
-                      style={[
-                        styles.smallLabel,
-                        { color: colors.secondaryText },
-                      ]}
-                    >
-                      Spent
-                    </Text>
+          <View style={styles.monthCenter}>
+            <Text style={styles.monthLabel}>SELECTED PERIOD</Text>
+            <Text style={styles.monthText}>
+              {getMonthName(selectedDate)}
+            </Text>
+          </View>
 
-                    <Text
-                      style={[styles.amount, { color: colors.text }]}
-                    >
-                      {formatCurrency(budget.totalSpent)}
-                    </Text>
+          <Pressable
+            onPress={() => changeMonth(1)}
+            style={({ pressed }) => [
+              styles.monthButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.monthArrow}>›</Text>
+          </Pressable>
+        </View>
+
+        {budgetLoading && !hasCurrentBudget ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="large"
+              color={colors.primary}
+            />
+            <Text style={styles.loadingText}>
+              Loading your budget...
+            </Text>
+          </View>
+        ) : (
+          <>
+            {/* BUDGET OVERVIEW */}
+            {hasCurrentBudget ? (
+              <>
+                <View style={styles.overviewCard}>
+                  <View style={styles.overviewTopRow}>
+                    <View>
+                      <Text style={styles.overviewLabel}>
+                        MONTHLY SPENDING LIMIT
+                      </Text>
+                      <Text style={styles.totalLimit}>
+                        {formatCurrency(budget.totalLimit)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.budgetIcon}>
+                      <Text style={styles.budgetIconText}>₹</Text>
+                    </View>
                   </View>
 
-                  <View>
-                    <Text
-                      style={[
-                        styles.smallLabel,
-                        { color: colors.secondaryText },
-                      ]}
-                    >
-                      Remaining
-                    </Text>
+                  <View style={styles.overviewDivider} />
 
-                    <Text
-                      style={[
-                        styles.amount,
-                        {
-                          color:
-                            budget.remaining < 0
-                              ? colors.danger
-                              : '#10B981',
-                        },
-                      ]}
-                    >
-                      {formatCurrency(budget.remaining)}
-                    </Text>
-                  </View>
-                </View>
+                  <View style={styles.spendingRow}>
+                    <View style={styles.spendingColumn}>
+                      <Text style={styles.smallLabel}>Spent so far</Text>
+                      <Text style={styles.spentAmount}>
+                        {formatCurrency(budget.totalSpent)}
+                      </Text>
+                    </View>
 
-                <View
-                  style={[
-                    styles.progressBackground,
-                    { backgroundColor: colors.surface },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.progressFill,
-                      {
-                        width: `${progressWidth}%`,
-                        backgroundColor: progressColor,
-                      },
-                    ]}
-                  />
-                </View>
-
-                <View style={styles.progressInfo}>
-                  <Text
-                    style={[
-                      styles.progressText,
-                      { color: colors.secondaryText },
-                    ]}
-                  >
-                    {percentage.toFixed(1)}% used
-                  </Text>
-
-                  <Text
-                    style={[
-                      styles.progressText,
-                      { color: colors.secondaryText },
-                    ]}
-                  >
-                    100%
-                  </Text>
-                </View>
-
-                <Text
-                  style={[
-                    styles.warningText,
-                    { color: progressColor },
-                  ]}
-                >
-                  {spendingMessage}
-                </Text>
-              </View>
-
-              {/* CATEGORY BUDGETS */}
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: colors.text },
-                ]}
-              >
-                Category Budgets
-              </Text>
-
-              {categorySummary.length === 0 ? (
-                <View
-                  style={[
-                    styles.emptyCard,
-                    { backgroundColor: colors.card },
-                  ]}
-                >
-                  <Text
-                    style={{ color: colors.secondaryText }}
-                  >
-                    No category budgets added yet.
-                  </Text>
-                </View>
-              ) : (
-                categorySummary.map((item, index) => {
-                  const used =
-                    item.limit > 0
-                      ? (item.spent / item.limit) * 100
-                      : 0;
-
-                  const categoryColor =
-                    used >= 100
-                      ? colors.danger
-                      : used >= 80
-                        ? '#F59E0B'
-                        : '#10B981';
-
-                  return (
-                    <View
-                      key={item.category}
-                      style={[
-                        styles.categoryCard,
-                        { backgroundColor: colors.card },
-                      ]}
-                    >
-                      <View style={styles.categoryHeader}>
-                        <Text
-                          style={[
-                            styles.categoryName,
-                            { color: colors.text },
-                          ]}
-                        >
-                          {item.category}
-                        </Text>
-
-                        <Text
-                          style={[
-                            styles.categoryPercentage,
-                            { color: categoryColor },
-                          ]}
-                        >
-                          {used.toFixed(1)}%
-                        </Text>
-                      </View>
-
+                    <View style={styles.spendingColumn}>
+                      <Text style={styles.smallLabel}>Remaining</Text>
                       <Text
                         style={[
-                          styles.categoryAmount,
-                          { color: colors.secondaryText },
-                        ]}
-                      >
-                        {formatCurrency(item.spent)} spent of{' '}
-                        {formatCurrency(item.limit)}
-                      </Text>
-
-                      <View
-                        style={[
-                          styles.progressBackground,
+                          styles.remainingAmount,
                           {
-                            backgroundColor: colors.surface,
-                            marginTop: 12,
+                            color:
+                              budget.remaining < 0
+                                ? colors.danger
+                                : '#10B981',
                           },
                         ]}
                       >
-                        <View
-                          style={[
-                            styles.progressFill,
-                            {
-                              width: `${Math.min(used, 100)}%`,
-                              backgroundColor: categoryColor,
-                            },
-                          ]}
-                        />
-                      </View>
-
-                      <Text
-                        style={[
-                          styles.remainingText,
-                          { color: colors.secondaryText },
-                        ]}
-                      >
-                        {formatCurrency(item.remaining)} remaining
+                        {formatCurrency(budget.remaining)}
                       </Text>
                     </View>
-                  );
-                })
-              )}
-            </>
-          ) : (
-            <View
-              style={[
-                styles.emptyCard,
-                { backgroundColor: colors.card },
-              ]}
-            >
-              <Text style={styles.emptyIcon}>🎯</Text>
+                  </View>
 
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: colors.text },
-                ]}
-              >
-                No budget set
-              </Text>
+                  <View style={styles.progressHeader}>
+                    <Text style={styles.progressHeading}>
+                      Budget usage
+                    </Text>
+                    <Text
+                      style={[
+                        styles.progressPercentage,
+                        { color: progressColor },
+                      ]}
+                    >
+                      {percentage.toFixed(1)}%
+                    </Text>
+                  </View>
 
-              <Text
-                style={[
-                  styles.emptyDescription,
-                  { color: colors.secondaryText },
-                ]}
-              >
-                Set a monthly spending limit and start
-                tracking your finances.
-              </Text>
-            </View>
-          )}
+                  <View style={styles.progressBackground}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${progressWidth}%`,
+                          backgroundColor: progressColor,
+                        },
+                      ]}
+                    />
+                  </View>
 
-          {/* EDITOR TOGGLE */}
-          {!showEditor && (
-            <Pressable
-              onPress={() => setShowEditor(true)}
-              style={[
-                styles.primaryButton,
-                { backgroundColor: colors.primary },
-              ]}
-            >
-              <Text style={styles.primaryButtonText}>
-                {hasCurrentBudget
-                  ? 'Edit Monthly Budget'
-                  : 'Set Monthly Budget'}
-              </Text>
-            </Pressable>
-          )}
+                  <View style={styles.progressInfo}>
+                    <Text style={styles.progressInfoText}>
+                      0% used
+                    </Text>
+                    <Text style={styles.progressInfoText}>
+                      100% limit
+                    </Text>
+                  </View>
 
-          {/* BUDGET EDITOR */}
-          {showEditor && (
-            <View
-              style={[
-                styles.editorCard,
-                { backgroundColor: colors.card },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.sectionTitle,
-                  { color: colors.text },
-                ]}
-              >
-                {hasCurrentBudget
-                  ? 'Update Budget'
-                  : 'Create Budget'}
-              </Text>
-
-              <Text
-                style={[
-                  styles.inputLabel,
-                  { color: colors.text },
-                ]}
-              >
-                Total Monthly Limit (₹)
-              </Text>
-
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    color: colors.text,
-                    borderColor: colors.border,
-                    backgroundColor: colors.background,
-                  },
-                ]}
-                value={totalLimit}
-                onChangeText={setTotalLimit}
-                keyboardType="numeric"
-                placeholder="Enter monthly budget"
-                placeholderTextColor={colors.secondaryText}
-              />
-
-              <Text
-                style={[
-                  styles.inputLabel,
-                  { color: colors.text },
-                ]}
-              >
-                Category Budgets
-              </Text>
-
-              {categoryRows.map((item, index) => (
-                <View
-                  key={index}
-                  style={styles.categoryInputRow}
-                >
-                  <TextInput
+                  <View
                     style={[
-                      styles.input,
-                      styles.categoryInput,
+                      styles.statusMessage,
                       {
-                        color: colors.text,
-                        borderColor: colors.border,
-                        backgroundColor: colors.background,
+                        backgroundColor: `${progressColor}18`,
                       },
                     ]}
-                    value={item.category}
-                    onChangeText={(value) =>
-                      updateCategoryRow(index, 'category', value)
-                    }
-                    placeholder="Category"
-                    placeholderTextColor={colors.secondaryText}
-                  />
-
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.limitInput,
-                      {
-                        color: colors.text,
-                        borderColor: colors.border,
-                        backgroundColor: colors.background,
-                      },
-                    ]}
-                    value={item.limit}
-                    onChangeText={(value) =>
-                      updateCategoryRow(index, 'limit', value)
-                    }
-                    keyboardType="numeric"
-                    placeholder="Limit ₹"
-                    placeholderTextColor={colors.secondaryText}
-                  />
-
-                  <Pressable
-                    onPress={() => removeCategoryRow(index)}
-                    style={styles.removeButton}
                   >
-                    <Text style={styles.removeText}>×</Text>
-                  </Pressable>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: progressColor },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        styles.statusText,
+                        { color: progressColor },
+                      ]}
+                    >
+                      {spendingMessage}
+                    </Text>
+                  </View>
                 </View>
-              ))}
 
-              <Pressable
-                onPress={addCategoryRow}
-                style={styles.addCategoryButton}
-              >
-                <Text
-                  style={[
-                    styles.addCategoryText,
-                    { color: colors.primary },
-                  ]}
-                >
-                  + Add Category
+                {/* CATEGORY BUDGETS */}
+                {renderSectionHeading(
+                  'SPENDING BREAKDOWN',
+                  'Category budgets',
+                  'Track how much you spend in each category.'
+                )}
+
+                {categorySummary.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Text style={styles.emptyIcon}>📊</Text>
+                    <Text style={styles.emptyTitle}>
+                      No category budgets
+                    </Text>
+                    <Text style={styles.emptyDescription}>
+                      Add category limits to monitor individual
+                      spending areas.
+                    </Text>
+                  </View>
+                ) : (
+                  categorySummary.map((item) => {
+                    const used =
+                      item.limit > 0
+                        ? (item.spent / item.limit) * 100
+                        : 0;
+
+                    const categoryColor =
+                      used >= 100
+                        ? colors.danger
+                        : used >= 80
+                          ? '#F59E0B'
+                          : '#10B981';
+
+                    return (
+                      <View
+                        key={item.category}
+                        style={styles.categoryCard}
+                      >
+                        <View style={styles.categoryHeader}>
+                          <View style={styles.categoryNameContainer}>
+                            <Text style={styles.categoryName}>
+                              {item.category}
+                            </Text>
+                            <Text style={styles.categorySubtext}>
+                              {formatCurrency(item.spent)} of{' '}
+                              {formatCurrency(item.limit)}
+                            </Text>
+                          </View>
+
+                          <View style={styles.categoryPercentageContainer}>
+                            <Text
+                              style={[
+                                styles.categoryPercentage,
+                                { color: categoryColor },
+                              ]}
+                            >
+                              {used.toFixed(1)}%
+                            </Text>
+                            <Text style={styles.categoryUsedLabel}>
+                              used
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View style={styles.progressBackground}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                width: `${Math.min(used, 100)}%`,
+                                backgroundColor: categoryColor,
+                              },
+                            ]}
+                          />
+                        </View>
+
+                        <View style={styles.categoryFooter}>
+                          <Text style={styles.categoryRemaining}>
+                            {formatCurrency(item.remaining)} remaining
+                          </Text>
+
+                          {used >= 100 ? (
+                            <Text
+                              style={[
+                                styles.categoryStatus,
+                                { color: colors.danger },
+                              ]}
+                            >
+                              Limit exceeded
+                            </Text>
+                          ) : used >= 80 ? (
+                            <Text
+                              style={[
+                                styles.categoryStatus,
+                                { color: '#F59E0B' },
+                              ]}
+                            >
+                              Almost at limit
+                            </Text>
+                          ) : (
+                            <Text
+                              style={[
+                                styles.categoryStatus,
+                                { color: '#10B981' },
+                              ]}
+                            >
+                              Within limit
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyIcon}>🎯</Text>
+                <Text style={styles.emptyTitle}>
+                  No budget set yet
                 </Text>
-              </Pressable>
+                <Text style={styles.emptyDescription}>
+                  Set a monthly spending limit and start tracking
+                  your finances. You can also create limits for
+                  individual categories.
+                </Text>
+              </View>
+            )}
 
+            {/* EDITOR TOGGLE */}
+            {!showEditor && (
               <Pressable
-                onPress={handleSaveBudget}
-                disabled={budgetLoading}
-                style={[
+                onPress={() => setShowEditor(true)}
+                style={({ pressed }) => [
                   styles.primaryButton,
-                  { backgroundColor: colors.primary },
+                  pressed && styles.buttonPressed,
                 ]}
               >
-                {budgetLoading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>
-                    Save Budget
-                  </Text>
-                )}
-              </Pressable>
-
-              <Pressable
-                onPress={() => setShowEditor(false)}
-                style={styles.cancelButton}
-              >
-                <Text
-                  style={[
-                    styles.cancelText,
-                    { color: colors.secondaryText },
-                  ]}
-                >
-                  Cancel
+                <Text style={styles.primaryButtonText}>
+                  {hasCurrentBudget
+                    ? '✎  Edit Monthly Budget'
+                    : '+  Set Monthly Budget'}
                 </Text>
               </Pressable>
-            </View>
-          )}
-        </>
-      )}
-    </ScrollView>
+            )}
+
+            {/* BUDGET EDITOR */}
+            {showEditor && (
+              <View style={styles.editorCard}>
+                {renderSectionHeading(
+                  'BUDGET SETTINGS',
+                  hasCurrentBudget ? 'Update your budget' : 'Create a budget',
+                  `Set your spending limits for ${getMonthName(selectedDate)}.`
+                )}
+
+                <Text style={styles.inputLabel}>
+                  Total monthly limit
+                </Text>
+
+                <View style={styles.amountInputContainer}>
+                  <Text style={styles.currencySymbol}>₹</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    value={totalLimit}
+                    onChangeText={setTotalLimit}
+                    keyboardType="numeric"
+                    placeholder="Enter monthly budget"
+                    placeholderTextColor={colors.secondaryText}
+                  />
+                </View>
+
+                <View style={styles.editorDivider} />
+
+                <Text style={styles.inputLabel}>
+                  Category limits
+                </Text>
+                <Text style={styles.inputHint}>
+                  Add a separate spending limit for each category.
+                </Text>
+
+                {categoryRows.map((item, index) => (
+                  <View
+                    key={index}
+                    style={styles.categoryInputCard}
+                  >
+                    <View style={styles.categoryInputHeader}>
+                      <Text style={styles.categoryInputNumber}>
+                        CATEGORY {index + 1}
+                      </Text>
+
+                      <Pressable
+                        onPress={() => removeCategoryRow(index)}
+                        style={styles.removeButton}
+                      >
+                        <Text style={styles.removeText}>Remove ×</Text>
+                      </Pressable>
+                    </View>
+
+                    <TextInput
+                      style={styles.input}
+                      value={item.category}
+                      onChangeText={(value) =>
+                        updateCategoryRow(index, 'category', value)
+                      }
+                      placeholder="Category name"
+                      placeholderTextColor={colors.secondaryText}
+                    />
+
+                    <View style={styles.categoryLimitInput}>
+                      <Text style={styles.currencySymbol}>₹</Text>
+                      <TextInput
+                        style={styles.categoryLimitTextInput}
+                        value={item.limit}
+                        onChangeText={(value) =>
+                          updateCategoryRow(index, 'limit', value)
+                        }
+                        keyboardType="numeric"
+                        placeholder="Enter category limit"
+                        placeholderTextColor={colors.secondaryText}
+                      />
+                    </View>
+                  </View>
+                ))}
+
+                <Pressable
+                  onPress={addCategoryRow}
+                  style={styles.addCategoryButton}
+                >
+                  <Text style={styles.addCategoryText}>
+                    + Add another category
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={handleSaveBudget}
+                  disabled={budgetLoading}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    budgetLoading && styles.disabledButton,
+                    pressed && !budgetLoading && styles.buttonPressed,
+                  ]}
+                >
+                  {budgetLoading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>
+                      Save Budget
+                    </Text>
+                  )}
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setShowEditor(false)}
+                  style={styles.cancelButton}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+              </View>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-
-  header: {
-    marginTop: 45,
-    marginBottom: 25,
-  },
-
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
-
-  subtitle: {
-    fontSize: 14,
-    marginTop: 6,
-  },
-
-  monthSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 25,
-  },
-
-  monthButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  arrow: {
-    fontSize: 28,
-    lineHeight: 32,
-  },
-
-  monthText: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-
-  overviewCard: {
-    padding: 22,
-    borderRadius: 18,
-    marginBottom: 28,
-  },
-
-  cardLabel: {
-    fontSize: 14,
-  },
-
-  totalLimit: {
-    fontSize: 32,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-
-  spendingRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 25,
-    marginBottom: 22,
-  },
-
-  smallLabel: {
-    fontSize: 12,
-  },
-
-  amount: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-
-  progressBackground: {
-    height: 10,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-
-  progressFill: {
-    height: 10,
-    borderRadius: 10,
-  },
-
-  progressInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 9,
-  },
-
-  progressText: {
-    fontSize: 11,
-  },
-
-  warningText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 15,
-  },
-
-  sectionTitle: {
-    fontSize: 19,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-
-  categoryCard: {
-    padding: 17,
-    borderRadius: 15,
-    marginBottom: 13,
-  },
-
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-
-  categoryName: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-
-  categoryPercentage: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  categoryAmount: {
-    fontSize: 12,
-    marginTop: 9,
-  },
-
-  remainingText: {
-    fontSize: 11,
-    marginTop: 9,
-  },
-
-  emptyCard: {
-    padding: 28,
-    borderRadius: 16,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: 12,
-  },
-
-  emptyTitle: {
-    fontSize: 19,
-    fontWeight: '700',
-  },
-
-  emptyDescription: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 9,
-    lineHeight: 20,
-  },
-
-  editorCard: {
-    padding: 18,
-    borderRadius: 16,
-    marginTop: 22,
-    marginBottom: 20,
-  },
-
-  inputLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 17,
-    marginBottom: 9,
-  },
-
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderRadius: 11,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-
-  categoryInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 7,
-  },
-
-  categoryInput: {
-    flex: 1.2,
-  },
-
-  limitInput: {
-    flex: 1,
-  },
-
-  removeButton: {
-    width: 30,
-    alignItems: 'center',
-  },
-
-  removeText: {
-    color: '#EF4444',
-    fontSize: 25,
-  },
-
-  addCategoryButton: {
-    marginTop: 8,
-    marginBottom: 18,
-  },
-
-  addCategoryText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  primaryButton: {
-    padding: 16,
-    borderRadius: 13,
-    alignItems: 'center',
-    marginTop: 18,
-  },
-
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-
-  cancelButton: {
-    alignItems: 'center',
-    padding: 13,
-  },
-
-  cancelText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  loadingContainer: {
-    padding: 50,
-    alignItems: 'center',
-  },
-
-  loadingText: {
-    marginTop: 12,
-    fontSize: 13,
-  },
-});
+const createStyles = (colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 45,
+    },
+    header: {
+      marginTop: 35,
+      marginBottom: 25,
+    },
+    eyebrow: {
+      fontSize: 11,
+      fontWeight: '800',
+      letterSpacing: 1.8,
+      color: colors.primary,
+      marginBottom: 8,
+    },
+    heading: {
+      fontSize: 30,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.8,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.secondaryText,
+      marginTop: 7,
+    },
+    monthSelector: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.card,
+      padding: 12,
+      borderRadius: 18,
+      marginBottom: 25,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    monthButton: {
+      width: 42,
+      height: 42,
+      borderRadius: 13,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    monthArrow: {
+      color: colors.text,
+      fontSize: 28,
+      lineHeight: 32,
+    },
+    monthCenter: {
+      alignItems: 'center',
+    },
+    monthLabel: {
+      fontSize: 9,
+      color: colors.secondaryText,
+      letterSpacing: 1.2,
+      fontWeight: '700',
+      marginBottom: 4,
+    },
+    monthText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    pressed: {
+      opacity: 0.7,
+    },
+    overviewCard: {
+      backgroundColor: colors.card,
+      borderRadius: 24,
+      padding: 22,
+      marginBottom: 30,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    overviewTopRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    overviewLabel: {
+      color: colors.secondaryText,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1.1,
+    },
+    totalLimit: {
+      fontSize: 34,
+      fontWeight: '800',
+      color: colors.text,
+      marginTop: 9,
+      letterSpacing: -0.8,
+    },
+    budgetIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 16,
+      backgroundColor: `${colors.primary}20`,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    budgetIconText: {
+      color: colors.primary,
+      fontSize: 25,
+      fontWeight: '800',
+    },
+    overviewDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 20,
+    },
+    spendingRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 25,
+    },
+    spendingColumn: {
+      flex: 1,
+    },
+    smallLabel: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      marginBottom: 7,
+    },
+    spentAmount: {
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    remainingAmount: {
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    progressHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    progressHeading: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    progressPercentage: {
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    progressBackground: {
+      height: 9,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: 9,
+      borderRadius: 20,
+    },
+    progressInfo: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 8,
+    },
+    progressInfoText: {
+      color: colors.secondaryText,
+      fontSize: 10,
+    },
+    statusMessage: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 12,
+      borderRadius: 12,
+      marginTop: 19,
+    },
+    statusDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 5,
+      marginRight: 9,
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: '700',
+      flex: 1,
+    },
+    sectionHeading: {
+      marginBottom: 17,
+      marginTop: 2,
+    },
+    sectionTitle: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.4,
+    },
+    sectionDescription: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      marginTop: 6,
+      lineHeight: 19,
+    },
+    categoryCard: {
+      backgroundColor: colors.card,
+      borderRadius: 18,
+      padding: 17,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoryHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    categoryNameContainer: {
+      flex: 1,
+    },
+    categoryName: {
+      fontSize: 15,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    categorySubtext: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      marginTop: 6,
+    },
+    categoryPercentageContainer: {
+      alignItems: 'flex-end',
+    },
+    categoryPercentage: {
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    categoryUsedLabel: {
+      fontSize: 10,
+      color: colors.secondaryText,
+      marginTop: 2,
+    },
+    categoryFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 12,
+    },
+    categoryRemaining: {
+      color: colors.secondaryText,
+      fontSize: 11,
+    },
+    categoryStatus: {
+      fontSize: 10,
+      fontWeight: '700',
+    },
+    emptyCard: {
+      backgroundColor: colors.card,
+      padding: 28,
+      borderRadius: 20,
+      alignItems: 'center',
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    emptyIcon: {
+      fontSize: 38,
+      marginBottom: 13,
+    },
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 19,
+      fontWeight: '800',
+      marginBottom: 8,
+    },
+    emptyDescription: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      textAlign: 'center',
+      lineHeight: 20,
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 17,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 12,
+      minHeight: 54,
+    },
+    primaryButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '800',
+      letterSpacing: 0.2,
+    },
+    buttonPressed: {
+      opacity: 0.8,
+      transform: [{ scale: 0.99 }],
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+    editorCard: {
+      backgroundColor: colors.card,
+      borderRadius: 22,
+      padding: 19,
+      marginTop: 24,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    inputLabel: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '800',
+      marginBottom: 9,
+    },
+    inputHint: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      marginTop: -3,
+      marginBottom: 15,
+      lineHeight: 18,
+    },
+    amountInputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 13,
+      paddingHorizontal: 14,
+      height: 55,
+    },
+    currencySymbol: {
+      color: colors.primary,
+      fontSize: 19,
+      fontWeight: '800',
+      marginRight: 9,
+    },
+    amountInput: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '700',
+      height: '100%',
+    },
+    editorDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 23,
+    },
+    categoryInputCard: {
+      backgroundColor: colors.background,
+      borderRadius: 14,
+      padding: 13,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    categoryInputHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 11,
+    },
+    categoryInputNumber: {
+      color: colors.secondaryText,
+      fontSize: 9,
+      fontWeight: '800',
+      letterSpacing: 1.1,
+    },
+    removeButton: {
+      paddingVertical: 4,
+      paddingHorizontal: 7,
+    },
+    removeText: {
+      color: colors.danger,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+    input: {
+      height: 47,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      color: colors.text,
+      backgroundColor: colors.card,
+      fontSize: 13,
+      marginBottom: 9,
+    },
+    categoryLimitInput: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      height: 47,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      backgroundColor: colors.card,
+    },
+    categoryLimitTextInput: {
+      flex: 1,
+      height: '100%',
+      color: colors.text,
+      fontSize: 13,
+    },
+    addCategoryButton: {
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderStyle: 'dashed',
+      borderRadius: 12,
+      padding: 14,
+      alignItems: 'center',
+      marginTop: 5,
+      marginBottom: 10,
+    },
+    addCategoryText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    cancelButton: {
+      alignItems: 'center',
+      padding: 15,
+    },
+    cancelText: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    loadingContainer: {
+      paddingVertical: 65,
+      alignItems: 'center',
+    },
+    loadingText: {
+      color: colors.secondaryText,
+      marginTop: 13,
+      fontSize: 13,
+    },
+  });
