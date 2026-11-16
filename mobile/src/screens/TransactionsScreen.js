@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Pressable,
   Alert,
+  StatusBar,
 } from 'react-native';
 
 import { useExpenses } from '../context/ExpenseContext';
@@ -20,6 +21,13 @@ const DATE_FILTERS = [
   'Today',
   'This week',
   'This month',
+];
+
+const SORT_OPTIONS = [
+  'Newest first',
+  'Oldest first',
+  'Highest amount',
+  'Lowest amount',
 ];
 
 function isWithinDateFilter(dateValue, filter) {
@@ -41,8 +49,7 @@ function isWithinDateFilter(dateValue, filter) {
 
   if (filter === 'This week') {
     const startOfWeek = new Date(now);
-    const day = now.getDay();
-    const daysSinceMonday = (day + 6) % 7;
+    const daysSinceMonday = (now.getDay() + 6) % 7;
 
     startOfWeek.setDate(now.getDate() - daysSinceMonday);
     startOfWeek.setHours(0, 0, 0, 0);
@@ -65,44 +72,44 @@ function isWithinDateFilter(dateValue, filter) {
 
 export default function TransactionsScreen({ navigation }) {
   const {
-    transactions,
-    totalExpenses,
+    transactions = [],
+    totalExpenses = 0,
     deleteExpense,
   } = useExpenses();
 
   const { theme } = useTheme();
   const colors = theme.colors;
+  const isDark = theme.mode === 'dark';
+
+  const styles = createStyles(colors, isDark);
 
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDateFilter, setSelectedDateFilter] =
     useState('All time');
-
   const [selectedSort, setSelectedSort] = useState('Newest first');
-
-  const SORT_OPTIONS = [
-    'Newest first',
-    'Oldest first',
-    'Highest amount',
-    'Lowest amount',
-  ];
-
-  
 
   const categories = [
     'All',
-    ...new Set(transactions.map((item) => item.category)),
+    ...new Set(
+      transactions
+        .map((item) => item.category)
+        .filter(Boolean)
+    ),
   ];
 
-  // Combine search, category and date filters
+  // SEARCH, CATEGORY AND DATE FILTERS
+
   const filteredTransactions = transactions.filter((item) => {
+    const title = String(item.title || '').toLowerCase();
+
     const matchesCategory =
       selectedCategory === 'All' ||
       item.category === selectedCategory;
 
-    const matchesSearch = item.title
-      .toLowerCase()
-      .includes(searchQuery.trim().toLowerCase());
+    const matchesSearch = title.includes(
+      searchQuery.trim().toLowerCase()
+    );
 
     const matchesDate = isWithinDateFilter(
       item.date,
@@ -112,27 +119,31 @@ export default function TransactionsScreen({ navigation }) {
     return matchesCategory && matchesSearch && matchesDate;
   });
 
+  // SORT TRANSACTIONS
+
   const sortedTransactions = [...filteredTransactions].sort(
-  (a, b) => {
-    if (selectedSort === 'Newest first') {
-      return new Date(b.date) - new Date(a.date);
-    }
+    (a, b) => {
+      if (selectedSort === 'Newest first') {
+        return new Date(b.date) - new Date(a.date);
+      }
 
-    if (selectedSort === 'Oldest first') {
-      return new Date(a.date) - new Date(b.date);
-    }
+      if (selectedSort === 'Oldest first') {
+        return new Date(a.date) - new Date(b.date);
+      }
 
-    if (selectedSort === 'Highest amount') {
-      return Number(b.amount) - Number(a.amount);
-    }
+      if (selectedSort === 'Highest amount') {
+        return Number(b.amount) - Number(a.amount);
+      }
 
-    if (selectedSort === 'Lowest amount') {
-      return Number(a.amount) - Number(b.amount);
-    }
+      if (selectedSort === 'Lowest amount') {
+        return Number(a.amount) - Number(b.amount);
+      }
 
-    return 0;
-  }
-);
+      return 0;
+    }
+  );
+
+  // DELETE EXPENSE
 
   const handleDelete = (id, title) => {
     Alert.alert(
@@ -172,459 +183,628 @@ export default function TransactionsScreen({ navigation }) {
     );
   };
 
-  return (
-    <ScrollView
+  const formatCurrency = (amount) =>
+    Number(amount || 0).toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  const hasActiveFilters =
+    searchQuery.length > 0 ||
+    selectedCategory !== 'All' ||
+    selectedDateFilter !== 'All time';
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('All');
+    setSelectedDateFilter('All time');
+    setSelectedSort('Newest first');
+  };
+
+  // FILTER CHIP
+
+  const renderFilter = (label, selected, onPress) => (
+    <Pressable
+      key={label}
+      onPress={onPress}
       style={[
-        styles.container,
-        { backgroundColor: colors.background },
+        styles.filterButton,
+        selected && styles.selectedFilter,
       ]}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.header}>
-        <Text style={[styles.heading, { color: colors.text }]}>
-          Transactions
-        </Text>
-
-        <Text
-          style={[
-            styles.subtitle,
-            { color: colors.secondaryText },
-          ]}
-        >
-          Track where your money goes
-        </Text>
-      </View>
-
-      {/* SUMMARY CARD */}
-      <View
+      <Text
         style={[
-          styles.summaryCard,
-          { backgroundColor: colors.card },
+          styles.filterText,
+          selected && styles.selectedFilterText,
         ]}
       >
-        <Text
-          style={[
-            styles.summaryLabel,
-            { color: colors.secondaryText },
-          ]}
-        >
-          Total Expenses
-        </Text>
-
-        <Text style={[styles.summaryAmount, { color: colors.text }]}>
-          ₹{totalExpenses.toLocaleString('en-IN')}
-        </Text>
-
-        <Text style={styles.transactionCount}>
-          {transactions.length} transactions recorded
-        </Text>
-      </View>
-
-      {/* ADD EXPENSE */}
-      <Pressable
-        style={styles.addButton}
-        onPress={() => navigation.navigate('AddExpense')}
-      >
-        <Text style={styles.addButtonText}>
-          + Add Expense
-        </Text>
-      </Pressable>
-
-      {/* SEARCH BAR */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Search Expenses
+        {label}
       </Text>
+    </Pressable>
+  );
 
-      <View
-        style={[
-          styles.searchContainer,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <Text style={styles.searchIcon}>🔍</Text>
-
-        <TextInput
-          style={[
-            styles.searchInput,
-            { color: colors.text },
-          ]}
-          placeholder="Search by expense title..."
-          placeholderTextColor={colors.secondaryText}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-
-        {searchQuery.length > 0 && (
-          <Pressable onPress={() => setSearchQuery('')}>
-            <Text
-              style={[
-                styles.clearSearch,
-                { color: colors.primary },
-              ]}
-            >
-              Clear
-            </Text>
-          </Pressable>
-        )}
-      </View>
-
-      {/* DATE FILTERS */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Filter by Date
-      </Text>
+  return (
+    <View style={styles.screen}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
 
       <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {DATE_FILTERS.map((filter) => {
-          const isSelected = selectedDateFilter === filter;
+        {/* HEADER */}
 
-          return (
-            <Pressable
-              key={filter}
-              onPress={() => setSelectedDateFilter(filter)}
-              style={[
-                styles.filterButton,
-                {
-                  backgroundColor: isSelected
-                    ? colors.primary
-                    : colors.card,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  {
-                    color: isSelected
-                      ? '#FFFFFF'
-                      : colors.secondaryText,
-                  },
-                ]}
-              >
-                {filter}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* CATEGORY FILTERS */}
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        Categories
-      </Text>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-      >
-        {categories.map((category) => {
-          const isSelected = selectedCategory === category;
-
-          return (
-            <Pressable
-              key={category}
-              onPress={() => setSelectedCategory(category)}
-              style={[
-                styles.filterButton,
-                {
-                  backgroundColor: isSelected
-                    ? colors.primary
-                    : colors.card,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  {
-                    color: isSelected
-                      ? '#FFFFFF'
-                      : colors.secondaryText,
-                  },
-                ]}
-              >
-                {category}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
-
-      {/* SORTING OPTIONS */}
-<Text style={[styles.sectionTitle, { color: colors.text }]}>
-  Sort By
-</Text>
-
-<ScrollView
-  horizontal
-  showsHorizontalScrollIndicator={false}
-  style={styles.filterContainer}
->
-  {SORT_OPTIONS.map((option) => {
-    const isSelected = selectedSort === option;
-
-    return (
-      <Pressable
-        key={option}
-        onPress={() => setSelectedSort(option)}
-        style={[
-          styles.filterButton,
-          {
-            backgroundColor: isSelected
-              ? colors.primary
-              : colors.card,
-            borderColor: colors.border,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.filterText,
-            {
-              color: isSelected
-                ? '#FFFFFF'
-                : colors.secondaryText,
-            },
-          ]}
-        >
-          {option}
-        </Text>
-      </Pressable>
-    );
-  })}
-</ScrollView>
-
-      {/* TRANSACTION LIST */}
-      <View style={styles.transactionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          All Transactions
-        </Text>
-
-        <Text
-          style={[
-            styles.resultCount,
-            { color: colors.secondaryText },
-          ]}
-        >
-          {filteredTransactions.length} results
-        </Text>
-      </View>
-
-      {filteredTransactions.length === 0 ? (
-        <View
-          style={[
-            styles.emptyState,
-            { backgroundColor: colors.card },
-          ]}
-        >
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            No matching expenses
+        <View style={styles.header}>
+          <Text style={styles.eyebrow}>
+            YOUR FINANCES
           </Text>
 
-          <Text
-            style={[
-              styles.emptySubtitle,
-              { color: colors.secondaryText },
-            ]}
-          >
-            Try changing your search, category or date filter.
+          <Text style={styles.heading}>
+            Transactions
+          </Text>
+
+          <Text style={styles.subtitle}>
+            Every expense, all in one place.
           </Text>
         </View>
-      ) : (
-        sortedTransactions.map((item) => (
-          <View key={item.id} style={styles.transactionWrapper}>
-            <Pressable
-              style={styles.transactionContent}
-              onPress={() =>
-                navigation.navigate('EditExpense', {
-                  expense: item,
-                })
-              }
-            >
-              <TransactionItem item={item} />
-            </Pressable>
 
-            <Pressable
-              style={styles.deleteButton}
-              onPress={() => handleDelete(item.id, item.title)}
-            >
-              <Text style={styles.deleteText}>Delete</Text>
-            </Pressable>
+        {/* SUMMARY CARD */}
+
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryTop}>
+            <View>
+              <Text style={styles.summaryLabel}>
+                TOTAL RECORDED EXPENSES
+              </Text>
+
+              <Text style={styles.summaryAmount}>
+                ₹{formatCurrency(totalExpenses)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryIcon}>
+              <Text style={styles.summaryIconText}>₹</Text>
+            </View>
           </View>
-        ))
-      )}
-    </ScrollView>
+
+          <View style={styles.summaryDivider} />
+
+          <View style={styles.summaryFooter}>
+            <Text style={styles.summaryFooterText}>
+              {transactions.length} transactions recorded
+            </Text>
+
+            <Text style={styles.summaryFooterText}>
+              All time
+            </Text>
+          </View>
+        </View>
+
+        {/* ADD EXPENSE */}
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.addButton,
+            pressed && styles.pressed,
+          ]}
+          onPress={() => navigation.navigate('AddExpense')}
+        >
+          <Text style={styles.addButtonIcon}>＋</Text>
+
+          <Text style={styles.addButtonText}>
+            Add New Expense
+          </Text>
+        </Pressable>
+
+        {/* SEARCH */}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Find a transaction
+          </Text>
+        </View>
+
+        <View style={styles.searchContainer}>
+          <Text style={styles.searchIcon}>⌕</Text>
+
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by expense title..."
+            placeholderTextColor={colors.secondaryText}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')}>
+              <Text style={styles.clearSearch}>Clear</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* DATE FILTERS */}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Date range
+          </Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+        >
+          {DATE_FILTERS.map((filter) =>
+            renderFilter(
+              filter,
+              selectedDateFilter === filter,
+              () => setSelectedDateFilter(filter)
+            )
+          )}
+        </ScrollView>
+
+        {/* CATEGORY FILTERS */}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Categories
+          </Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+        >
+          {categories.map((category) =>
+            renderFilter(
+              category,
+              selectedCategory === category,
+              () => setSelectedCategory(category)
+            )
+          )}
+        </ScrollView>
+
+        {/* SORTING */}
+
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            Sort transactions
+          </Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+        >
+          {SORT_OPTIONS.map((option) =>
+            renderFilter(
+              option,
+              selectedSort === option,
+              () => setSelectedSort(option)
+            )
+          )}
+        </ScrollView>
+
+        {/* TRANSACTION LIST HEADER */}
+
+        <View style={styles.transactionHeader}>
+          <View>
+            <Text style={styles.sectionTitle}>
+              All transactions
+            </Text>
+
+            <Text style={styles.resultCount}>
+              Showing {filteredTransactions.length} of {transactions.length}
+            </Text>
+          </View>
+
+          {hasActiveFilters && (
+            <Pressable onPress={clearFilters}>
+              <Text style={styles.clearFilters}>
+                Reset filters
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* TRANSACTION LIST */}
+
+        {sortedTransactions.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Text style={styles.emptyEmoji}>🔎</Text>
+            </View>
+
+            <Text style={styles.emptyTitle}>
+              No matching expenses
+            </Text>
+
+            <Text style={styles.emptySubtitle}>
+              Try changing your search, category or date filter.
+            </Text>
+
+            {hasActiveFilters && (
+              <Pressable
+                style={styles.resetButton}
+                onPress={clearFilters}
+              >
+                <Text style={styles.resetButtonText}>
+                  Clear all filters
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        ) : (
+          sortedTransactions.map((item) => (
+            <View key={item.id} style={styles.transactionWrapper}>
+              <Pressable
+                style={styles.transactionContent}
+                onPress={() =>
+                  navigation.navigate('EditExpense', {
+                    expense: item,
+                  })
+                }
+              >
+                <TransactionItem item={item} />
+              </Pressable>
+
+              <Pressable
+                style={styles.deleteButton}
+                onPress={() =>
+                  handleDelete(item.id, item.title)
+                }
+              >
+                <Text style={styles.deleteText}>
+                  Delete expense
+                </Text>
+              </Pressable>
+            </View>
+          ))
+        )}
+
+        {/* FOOTER */}
+
+        <Text style={styles.footer}>
+          Stay aware. Spend wisely. ✨
+        </Text>
+      </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
+// STYLES
 
-  header: {
-    marginTop: 45,
-    marginBottom: 24,
-  },
+const createStyles = (colors, isDark) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
 
-  heading: {
-    fontSize: 28,
-    fontWeight: '700',
-  },
+    container: {
+      paddingHorizontal: 20,
+      paddingTop: 55,
+      paddingBottom: 35,
+    },
 
-  subtitle: {
-    fontSize: 14,
-    marginTop: 6,
-  },
+    // HEADER
 
-  summaryCard: {
-    padding: 22,
-    borderRadius: 18,
-    marginBottom: 15,
-  },
+    header: {
+      marginBottom: 25,
+    },
 
-  summaryLabel: {
-    fontSize: 14,
-  },
+    eyebrow: {
+      color: colors.primary,
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 1.5,
+      marginBottom: 8,
+    },
 
-  summaryAmount: {
-    fontSize: 30,
-    fontWeight: '700',
-    marginTop: 10,
-  },
+    heading: {
+      color: colors.text,
+      fontSize: 29,
+      fontWeight: '800',
+    },
 
-  transactionCount: {
-    color: '#A78BFA',
-    fontSize: 12,
-    marginTop: 8,
-  },
+    subtitle: {
+      color: colors.secondaryText,
+      fontSize: 13,
+      marginTop: 7,
+    },
 
-  addButton: {
-    backgroundColor: '#8B5CF6',
-    padding: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginBottom: 25,
-  },
+    // SUMMARY
 
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
+    summaryCard: {
+      backgroundColor: colors.primary,
+      padding: 22,
+      borderRadius: 23,
+      marginBottom: 17,
+      elevation: 4,
+      shadowColor: '#000000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.12,
+      shadowRadius: 9,
+    },
 
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
+    summaryTop: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
 
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    marginTop: 14,
-    marginBottom: 25,
-    height: 52,
-  },
+    summaryLabel: {
+      color: '#FFFFFF',
+      fontSize: 10,
+      fontWeight: '700',
+      letterSpacing: 1,
+    },
 
-  searchIcon: {
-    fontSize: 17,
-    marginRight: 10,
-  },
+    summaryAmount: {
+      color: '#FFFFFF',
+      fontSize: 29,
+      fontWeight: '800',
+      marginTop: 12,
+    },
 
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    height: '100%',
-  },
+    summaryIcon: {
+      width: 47,
+      height: 47,
+      borderRadius: 16,
+      backgroundColor: '#FFFFFF30',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
 
-  clearSearch: {
-    fontSize: 12,
-    fontWeight: '700',
-    paddingLeft: 8,
-  },
+    summaryIconText: {
+      color: '#FFFFFF',
+      fontSize: 25,
+      fontWeight: '800',
+    },
 
-  filterContainer: {
-    marginTop: 15,
-    marginBottom: 25,
-    flexGrow: 0,
-  },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: '#FFFFFF40',
+      marginTop: 20,
+      marginBottom: 14,
+    },
 
-  filterButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-  },
+    summaryFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
 
-  filterText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
+    summaryFooterText: {
+      color: '#FFFFFF',
+      fontSize: 11,
+      fontWeight: '600',
+    },
 
-  transactionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
+    // ADD BUTTON
 
-  resultCount: {
-    fontSize: 12,
-  },
+    addButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      borderRadius: 15,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 29,
+    },
 
-  transactionWrapper: {
-    marginBottom: 12,
-  },
+    addButtonIcon: {
+      color: '#FFFFFF',
+      fontSize: 20,
+      fontWeight: '700',
+      marginRight: 7,
+    },
 
-  transactionContent: {
-    marginBottom: 6,
-  },
+    addButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '800',
+    },
 
-  deleteButton: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#351D2A',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
+    pressed: {
+      opacity: 0.8,
+      transform: [{ scale: 0.98 }],
+    },
 
-  deleteText: {
-    color: '#F87171',
-    fontSize: 12,
-    fontWeight: '600',
-  },
+    // SECTION HEADERS
 
-  emptyState: {
-    padding: 30,
-    alignItems: 'center',
-    borderRadius: 15,
-  },
+    sectionHeader: {
+      marginBottom: 11,
+    },
 
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-  },
+    sectionTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '800',
+    },
 
-  emptySubtitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-});
+    // SEARCH
+
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 15,
+      paddingHorizontal: 14,
+      height: 53,
+      marginBottom: 25,
+    },
+
+    searchIcon: {
+      color: colors.secondaryText,
+      fontSize: 25,
+      marginRight: 10,
+    },
+
+    searchInput: {
+      flex: 1,
+      color: colors.text,
+      fontSize: 13,
+      height: '100%',
+    },
+
+    clearSearch: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '700',
+      paddingLeft: 8,
+    },
+
+    // FILTERS
+
+    filterContainer: {
+      marginBottom: 24,
+      flexGrow: 0,
+    },
+
+    filterButton: {
+      backgroundColor: colors.card,
+      borderColor: colors.border,
+      borderWidth: 1,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      marginRight: 9,
+    },
+
+    selectedFilter: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+
+    filterText: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+
+    selectedFilterText: {
+      color: '#FFFFFF',
+    },
+
+    // TRANSACTION LIST
+
+    transactionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginTop: 5,
+      marginBottom: 17,
+    },
+
+    resultCount: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      marginTop: 5,
+    },
+
+    clearFilters: {
+      color: colors.primary,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+
+    transactionWrapper: {
+      backgroundColor: colors.card,
+      borderRadius: 17,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 10,
+      marginBottom: 12,
+    },
+
+    transactionContent: {
+      marginBottom: 7,
+    },
+
+    deleteButton: {
+      alignSelf: 'flex-end',
+      backgroundColor: isDark ? '#351D2A' : '#FEE2E2',
+      paddingHorizontal: 13,
+      paddingVertical: 8,
+      borderRadius: 9,
+    },
+
+    deleteText: {
+      color: colors.danger,
+      fontSize: 11,
+      fontWeight: '700',
+    },
+
+    // EMPTY STATE
+
+    emptyState: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 27,
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+
+    emptyIcon: {
+      width: 62,
+      height: 62,
+      borderRadius: 21,
+      backgroundColor: isDark ? '#382C56' : '#F0E9FF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+
+    emptyEmoji: {
+      fontSize: 27,
+    },
+
+    emptyTitle: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '800',
+    },
+
+    emptySubtitle: {
+      color: colors.secondaryText,
+      fontSize: 12,
+      textAlign: 'center',
+      lineHeight: 19,
+      marginTop: 9,
+    },
+
+    resetButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+      borderRadius: 11,
+      marginTop: 17,
+    },
+
+    resetButtonText: {
+      color: '#FFFFFF',
+      fontSize: 12,
+      fontWeight: '700',
+    },
+
+    // FOOTER
+
+    footer: {
+      color: colors.secondaryText,
+      fontSize: 11,
+      textAlign: 'center',
+      marginTop: 25,
+    },
+  });
