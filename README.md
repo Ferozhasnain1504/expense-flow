@@ -374,25 +374,60 @@ This project gave me practical experience with:
 
 ## 📸 Application Screenshots
 
-- Login
-  ![Login](docs/assets/login.jpeg)
-- Sign up
-  ![Sign up](docs/assets/sign-up.jpeg) 
-- Dashboard
-  ![Dashboard](docs/assets/dashboard.jpeg) 
-- Transactions
-  ![Transactions](docs/assets/transactions.jpeg)
-- Add Expense
-  ![Add Expense](docs/assets/add-expense.jpeg)
-- Analytics
-  ![Analytics](docs/assets/analytics.jpeg)
-  ![Analytics](docs/assets/analytics-1.jpeg)
-- Budget Management
-  ![Budget Management](docs/assets/budgets.jpeg)
-- Recurring Expenses
-  ![Recurring Expenses](docs/assets/recurring-expenses.jpeg)
-- Profile
-  ![Profile](docs/assets/profile.jpeg)
+## 📸 Application Screenshots
+
+<table>
+  <tr>
+    <td align="center">
+      <b>Login</b><br/>
+      <img src="docs/assets/login.jpeg" width="200"/>
+    </td>
+    <td align="center">
+      <b>Sign Up</b><br/>
+      <img src="docs/assets/sign-up.jpeg" width="200"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>Dashboard</b><br/>
+      <img src="docs/assets/dashboard.jpeg" width="200"/>
+    </td>
+    <td align="center">
+      <b>Transactions</b><br/>
+      <img src="docs/assets/transactions.jpeg" width="200"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>Add Expense</b><br/>
+      <img src="docs/assets/add-expense.jpeg" width="200"/>
+    </td>
+    <td align="center">
+      <b>Analytics</b><br/>
+      <img src="docs/assets/analytics.jpeg" width="200"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>Analytics – Category Breakdown</b><br/>
+      <img src="docs/assets/analytics-1.jpeg" width="200"/>
+    </td>
+    <td align="center">
+      <b>Budget Management</b><br/>
+      <img src="docs/assets/budgets.jpeg" width="200"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>Recurring Expenses</b><br/>
+      <img src="docs/assets/recurring-expenses.jpeg" width="200"/>
+    </td>
+    <td align="center">
+      <b>Profile</b><br/>
+      <img src="docs/assets/profile.jpeg" width="200"/>
+    </td>
+  </tr>
+</table>
 
 ---
 
