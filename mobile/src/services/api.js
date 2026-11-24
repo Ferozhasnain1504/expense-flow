@@ -3,7 +3,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 const API = axios.create({
-  baseURL: 'http://10.236.197.8:5000/api',
+  baseURL: 'https://expense-flow-5iv5.onrender.com/api',
   headers: {
     'Content-Type': 'application/json',
   },

@@ -1,8 +1,7 @@
-
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "ExpenseFlow",
+    "slug": "expense-flow",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.expenseflow.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,6 +24,11 @@
     "plugins": [
       "expo-secure-store",
       "expo-notifications"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "679bcd09-2701-4d80-a748-fe47ae194164"
+      }
+    }
   }
 }
