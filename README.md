@@ -12,7 +12,10 @@ The project was built to explore full-stack mobile development, REST API design,
 
 ### Scan to download the Android APK
 
-![ExpenseFlow APK QR Code](docs/assets/expenseflow_qr.png)
+<div align="center">
+  <img src="docs/assets/expenseflow_qr.png" width="300" alt="ExpenseFlow APK QR Code"/>
+  <p><b>Scan to Download ExpenseFlow APK</b></p>
+</div>
 
 Scan the QR code using your phone to open the Android APK download link.
 
@@ -374,25 +377,60 @@ This project gave me practical experience with:
 
 ## 📸 Application Screenshots
 
-- Login
-  ![Login](docs/assets/login.jpeg)
-- Sign up
-  ![Sign up](docs/assets/sign-up.jpeg) 
-- Dashboard
-  ![Dashboard](docs/assets/dashboard.jpeg) 
-- Transactions
-  ![Transactions](docs/assets/transactions.jpeg)
-- Add Expense
-  ![Add Expense](docs/assets/add-expense.jpeg)
-- Analytics
-  ![Analytics](docs/assets/analytics.jpeg)
-  ![Analytics](docs/assets/analytics-1.jpeg)
-- Budget Management
-  ![Budget Management](docs/assets/budgets.jpeg)
-- Recurring Expenses
-  ![Recurring Expenses](docs/assets/recurring-expenses.jpeg)
-- Profile
-  ![Profile](docs/assets/profile.jpeg)
+<div align="center">
+  <table>
+  <tr>
+    <td align="center">
+      <b>Login</b><br/>
+      <img src="docs/assets/login.jpeg" width="150"/>
+    </td>
+    <td align="center">
+      <b>Sign Up</b><br/>
+      <img src="docs/assets/sign-up.jpeg" width="150"/>
+    </td>
+    <td align="center">
+      <b>Dashboard</b><br/>
+      <img src="docs/assets/dashboard.jpeg" width="150"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>Transactions</b><br/>
+      <img src="docs/assets/transactions.jpeg" width="150"/>
+    </td>
+    <td align="center">
+      <b>Add Expense</b><br/>
+      <img src="docs/assets/add-expense.jpeg" width="150"/>
+    </td>
+    <td align="center">
+      <b>Analytics</b><br/>
+      <img src="docs/assets/analytics.jpeg" width="150"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>Analytics Breakdown</b><br/>
+      <img src="docs/assets/analytics-1.jpeg" width="150"/>
+    </td>
+    <td align="center">
+      <b>Budget Management</b><br/>
+      <img src="docs/assets/budgets.jpeg" width="150"/>
+    </td>
+    <td align="center">
+      <b>Recurring Expenses</b><br/>
+      <img src="docs/assets/recurring-expenses.jpeg" width="150"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <b>Profile</b><br/>
+      <img src="docs/assets/profile.jpeg" width="150"/>
+    </td>
+    <td></td>
+    <td></td>
+  </tr>
+</table>
+</div>
 
 ---
 
